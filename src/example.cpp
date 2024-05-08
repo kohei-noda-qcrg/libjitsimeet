@@ -4,6 +4,30 @@
 #include "websocket.hpp"
 #include "xmpp/connection.hpp"
 
+struct ConferenceCallbacks : public conference::ConferenceCallbacks {
+    ws::Connection* ws_conn;
+
+    virtual auto send_payload(std::string_view payload) -> void override {
+        ws::send_str(ws_conn, payload);
+    }
+
+    virtual auto on_jingle_initiate(jingle::Jingle jingle) -> bool override {
+        return true;
+    }
+
+    virtual auto on_jingle_add_source(jingle::Jingle jingle) -> bool override {
+        return true;
+    }
+
+    virtual auto on_participant_joined(const conference::Participant& participant) -> void override {
+        print("partitipant joined ", participant.participant_id, " ", participant.nick);
+    }
+
+    virtual auto on_participant_left(const conference::Participant& participant) -> void override {
+        print("partitipant left ", participant.participant_id, " ", participant.nick);
+    }
+};
+
 auto main() -> int {
     constexpr auto host    = "jitsi.local";
     constexpr auto room    = "room";
@@ -36,15 +60,9 @@ auto main() -> int {
 
     // join conference
     {
-        const auto conference             = conference::Conference::create(room, jid);
-        conference->jingle_handler        = new JingleHandler();
-        conference->send_payload          = ws_tx;
-        conference->on_participant_joined = [](const conference::Participant& p) -> void {
-            print("partitipant joined ", p.participant_id, " ", p.nick);
-        };
-        conference->on_participant_left = [](const conference::Participant& p) -> void {
-            print("partitipant left ", p.participant_id, " ", p.nick);
-        };
+        auto callbacks        = ConferenceCallbacks();
+        callbacks.ws_conn     = ws_conn;
+        const auto conference = conference::Conference::create(room, jid, &callbacks);
 
         ws::add_rx(ws_conn, [&conference, &event](const std::span<std::byte> data) -> ws::RxResult {
             const auto done = conference->feed_payload(std::string_view((char*)data.data(), data.size()));

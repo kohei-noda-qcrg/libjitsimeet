@@ -1,7 +1,5 @@
 #pragma once
-#include <functional>
-
-#include "jingle-handler.hpp"
+#include "jingle/jingle.hpp"
 #include "util/coroutine.hpp"
 #include "util/string-map.hpp"
 #include "xmpp/jid.hpp"
@@ -12,38 +10,52 @@ struct Participant {
     std::string nick;
 };
 
+struct ConferenceCallbacks {
+    virtual auto send_payload(std::string_view /*payload*/) -> void = 0;
+
+    virtual auto on_jingle_initiate(jingle::Jingle /*jingle*/) -> bool {
+        return true;
+    }
+
+    virtual auto on_jingle_add_source(jingle::Jingle /*jingle*/) -> bool {
+        return true;
+    }
+
+    virtual auto on_participant_joined(const Participant& /*participant*/) -> void {
+    }
+
+    virtual auto on_participant_left(const Participant& /*participant*/) -> void {
+    }
+};
+
 struct Conference {
     using Worker = CoRoutine<bool>;
 
     // constant
-    xmpp::Jid   jid;                 // self jid in the server
-    xmpp::Jid   focus_jid;           // focus jid in the server
-    xmpp::Jid   muc_jid;             // room jid
-    xmpp::Jid   muc_local_jid;       // self jid in the room
-    xmpp::Jid   muc_local_focus_jid; // focus jid in the room
-    std::string disco_sha1_base64;
-    std::string disco_sha256_base64;
+    xmpp::Jid            jid;                 // self jid in the server
+    xmpp::Jid            focus_jid;           // focus jid in the server
+    xmpp::Jid            muc_jid;             // room jid
+    xmpp::Jid            muc_local_jid;       // self jid in the room
+    xmpp::Jid            muc_local_focus_jid; // focus jid in the room
+    std::string          disco_sha1_base64;
+    std::string          disco_sha256_base64;
+    ConferenceCallbacks* callbacks;
 
     // coroutine
     std::string_view worker_arg;
     Worker           worker;
 
+    // state
     std::string            jingle_accept_iq_id;
     StringMap<Participant> participants;
     int                    iq_serial;
-
-    // owner must init these fields
-    JingleHandler*                          jingle_handler;
-    std::function<void(std::string_view)>   send_payload;
-    std::function<void(const Participant&)> on_participant_joined;
-    std::function<void(const Participant&)> on_participant_left;
 
     auto generate_iq_id() -> std::string;
     auto start_negotiation() -> void;
     auto feed_payload(std::string_view payload) -> bool;
     auto send_jingle_accept(jingle::Jingle jingle) -> void;
 
-    static auto create(std::string_view room, const xmpp::Jid& jid) -> std::unique_ptr<Conference>;
+    static auto create(std::string_view room, const xmpp::Jid& jid, ConferenceCallbacks* callbacks) -> std::unique_ptr<Conference>;
 
     ~Conference(){};
 };

@@ -97,7 +97,7 @@ auto handle_iq_get(Conference* const conf, const xml::Node& iq) -> bool {
             disco_info,
         });
     }
-    conf->send_payload(xml::deparse(iqr));
+    conf->callbacks->send_payload(xml::deparse(iqr));
     return true;
 }
 
@@ -117,10 +117,10 @@ auto handle_iq_set(Conference* const conf, const xml::Node& iq) -> bool {
     print("jingle action ", *jingle_node.find_attr("action"));
     switch(jingle.action) {
     case jingle::Jingle::Action::SessionInitiate:
-        conf->jingle_handler->initiate(std::move(jingle));
+        conf->callbacks->on_jingle_initiate(std::move(jingle));
         goto ack;
     case jingle::Jingle::Action::SourceAdd:
-        conf->jingle_handler->add_source(std::move(jingle));
+        conf->callbacks->on_jingle_add_source(std::move(jingle));
         goto ack;
     default:
         print("not implemented");
@@ -135,7 +135,7 @@ ack:
                              {"id", std::string(id)},
                              {"type", "result"},
                          });
-    conf->send_payload(xml::deparse(iqr));
+    conf->callbacks->send_payload(xml::deparse(iqr));
     return true;
 }
 
@@ -176,7 +176,7 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
     if(const auto type = presence.find_attr("type"); type) {
         if(*type == "unavailable") {
             if(const auto i = conf->participants.find(from.resource); i != conf->participants.end()) {
-                conf->on_participant_left(i->second);
+                conf->callbacks->on_participant_left(i->second);
                 conf->participants.erase(i);
             } else {
                 PRINT("got unavailable presence from unknown participant");
@@ -206,7 +206,7 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
     }
 
     if(joined) {
-        conf->on_participant_joined(*participant);
+        conf->callbacks->on_participant_joined(*participant);
     }
 
     return true;
@@ -242,7 +242,7 @@ auto negotiate(Conference* const conf) -> Conference::Worker::Generator {
                                             }),
                                     }),
                             });
-        conf->send_payload(xml::deparse(iq));
+        conf->callbacks->send_payload(xml::deparse(iq));
         co_yield true;
 
         const auto response = xml::parse(conf->worker_arg).as_value();
@@ -299,7 +299,7 @@ auto negotiate(Conference* const conf) -> Conference::Worker::Generator {
                         .set_data("mojyack"),
                 });
 
-        conf->send_payload(xml::deparse(presence));
+        conf->callbacks->send_payload(xml::deparse(presence));
         co_yield true;
     }
 
@@ -390,10 +390,12 @@ auto Conference::send_jingle_accept(const jingle::Jingle jingle) -> void {
                                    jingle::deparse(jingle),
                                });
 
-    send_payload(xml::deparse(accept_iq));
+    callbacks->send_payload(xml::deparse(accept_iq));
 }
 
-auto Conference::create(const std::string_view room, const xmpp::Jid& jid) -> std::unique_ptr<Conference> {
+auto Conference::create(const std::string_view     room,
+                        const xmpp::Jid&           jid,
+                        ConferenceCallbacks* const callbacks) -> std::unique_ptr<Conference> {
     const auto muc_domain = std::string("conference.") + jid.domain;
 
     auto conf = new Conference{
@@ -418,6 +420,7 @@ auto Conference::create(const std::string_view room, const xmpp::Jid& jid) -> st
             .domain   = muc_domain,
             .resource = "focus",
         },
+        .callbacks = callbacks,
         .iq_serial = 0,
     };
 
