@@ -39,7 +39,7 @@ auto main() -> int {
     auto jid    = xmpp::Jid();
     auto ext_sv = std::vector<xmpp::Service>();
 
-    // connet to server
+    // connect to server
     {
         const auto xmpp_conn = xmpp::create(host, [ws_conn](const std::string_view str) {
             ws::send_str(ws_conn, str);
