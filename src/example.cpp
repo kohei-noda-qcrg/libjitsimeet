@@ -4,6 +4,7 @@
 #include "util/print.hpp"
 #include "websocket.hpp"
 #include "xmpp/connection.hpp"
+#include "xmpp/elements.hpp"
 
 struct XMPPNegotiatorCallbacks : public xmpp::NegotiatorCallbacks {
     ws::Connection* ws_conn;
@@ -124,12 +125,18 @@ auto main(const int argc, const char* const argv[]) -> int {
         event.wait();
         conference->send_jingle_accept(jingle_handler.build_accept_jingle().value());
 
-        auto count = 1;
+        auto count = 0;
         while(true) {
-            const auto payload = build_string(R"(<iq xmlns='jabber:client' id=")", "ping_",
-                                              count += 1,
-                                              R"(" type="get"><ping xmlns='urn:xmpp:ping'/></iq>)");
-            ws::send_str(ws_conn, payload);
+            const auto id = build_string("ping_", count += 1);
+            const auto iq = xmpp::elm::iq.clone()
+                                .append_attrs({
+                                    {"id", id},
+                                    {"type", "get"},
+                                })
+                                .append_children({
+                                    xmpp::elm::ping,
+                                });
+            ws::send_str(ws_conn, xml::deparse(iq));
             std::this_thread::sleep_for(std::chrono::seconds(10));
         }
     }
