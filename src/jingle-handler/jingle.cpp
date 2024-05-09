@@ -1,6 +1,7 @@
 #include <iomanip>
 
 #include "../assert.hpp"
+#include "../config.hpp"
 #include "../jingle/jingle.hpp"
 #include "../sha.hpp"
 #include "../unwrap.hpp"
@@ -54,7 +55,7 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
             };
             r.codecs.push_back(codec);
         } else {
-            PRINT("unknown codec ", pt.name);
+            WARN("unknown codec ", pt.name);
         }
     }
     // parse retransmission payload types
@@ -68,7 +69,7 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
             }
             const auto apt = from_chars<int>(p.value);
             if(!apt) {
-                PRINT("invalid apt ", p.value);
+                WARN("invalid apt ", p.value);
                 continue;
             }
             for(auto& codec : r.codecs) {
@@ -94,7 +95,7 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
                 break;
             }
         } else {
-            PRINT("unsupported rtp header extension ", ext.uri);
+            WARN("unsupported rtp header extension ", ext.uri);
         }
     }
     // parse ssrc
@@ -310,10 +311,11 @@ auto JingleHandler::on_initiate(jingle::Jingle jingle) -> bool {
     auto       cert_pem        = pem::encode("CERTIFICATE", *cert_der);
     auto       priv_key_pem    = pem::encode("PRIVATE KEY", *priv_key_der);
 
-    // DEBUG
-    printf("%s\n", fingerprint_str.data());
-    printf("%s\n", cert_pem.data());
-    printf("%s\n", priv_key_pem.data());
+    if(config::debug_jingle_handler) {
+        PRINT(fingerprint_str.data());
+        PRINT(cert_pem.data());
+        PRINT(priv_key_pem.data());
+    }
     // TODO
     const auto audio_ssrc     = uint32_t(3111629862);
     const auto video_ssrc     = uint32_t(2087854985);
@@ -355,7 +357,7 @@ auto JingleHandler::on_add_source(jingle::Jingle jingle) -> bool {
             } else if(desc.media == "video") {
                 type = SourceType::Video;
             } else {
-                PRINT("unknown media ", desc.media);
+                WARN("unknown media ", desc.media);
                 continue;
             }
             for(const auto& src : desc.sources) {
