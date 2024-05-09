@@ -352,17 +352,6 @@ auto jid_node_to_muc_resource(const std::string_view node) -> std::string {
 }
 } // namespace
 
-// DEBUG
-auto test() -> void {
-    return;
-    const auto disco_str = compute_disco_str(disco_info);
-    const auto hash      = sha::calc_sha1(to_span(disco_str));
-    const auto str       = base64::encode(hash);
-    print(disco_str);
-    print(str);
-    return;
-}
-
 auto Conference::generate_iq_id() -> std::string {
     return build_string("iq_", (iq_serial += 1));
 }
