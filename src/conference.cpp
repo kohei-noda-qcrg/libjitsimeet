@@ -4,6 +4,7 @@
 #include "caps.hpp"
 #include "config.hpp"
 #include "jingle/jingle.hpp"
+#include "random.hpp"
 #include "sha.hpp"
 #include "unwrap.hpp"
 #include "util/misc.hpp"
@@ -222,9 +223,7 @@ auto handle_received(Conference* const conf) -> Conference::Worker::Generator {
     // disco
     {
         const auto id = conf->generate_iq_id();
-
-        // DEBUG
-        const auto muid = "0cf847e2-4e3b-4271-b847-8e79c82e872a";
+        const auto muid = build_string("muid_", rng::generate_random_uint32());
         const auto iq   = xmpp::elm::iq.clone()
                             .append_attrs({
                                 {"to", conf->focus_jid.as_full()},
