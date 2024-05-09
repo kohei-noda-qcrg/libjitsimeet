@@ -30,10 +30,40 @@ struct ConferenceCallbacks : public conference::ConferenceCallbacks {
     }
 };
 
-auto main() -> int {
-    constexpr auto host    = "jitsi.local";
-    constexpr auto room    = "room";
-    const auto     ws_conn = ws::create_connection(host, (std::string("xmpp-websocket?room=") + room).data(), false);
+struct Args {
+    const char* host   = nullptr;
+    const char* room   = nullptr;
+    bool        secure = true;
+
+    static auto parse(const int argc, const char* const argv[]) -> Args {
+        auto args = Args();
+        for(auto i = 1; i < argc; i += 1) {
+            if(std::strcmp(argv[i], "-s") == 0) {
+                args.secure = false;
+            } else {
+                if(args.host == nullptr) {
+                    args.host = argv[i];
+                } else if(args.room == nullptr) {
+                    args.room = argv[i];
+                } else {
+                    warn("too many arguments");
+                    exit(1);
+                }
+            }
+        }
+        return args;
+    }
+};
+
+auto main(const int argc, const char* const argv[]) -> int {
+    if(argc < 3) {
+        print("usage: example [-s] HOST ROOM");
+        print("    -s: allow self-signed cert");
+        return 1;
+    }
+    const auto args    = Args::parse(argc, argv);
+    const auto ws_path = std::string("xmpp-websocket?room=") + args.room;
+    const auto ws_conn = ws::create_connection(args.host, ws_path.data(), args.secure);
 
     auto event  = Event();
     auto jid    = xmpp::Jid();
@@ -41,7 +71,7 @@ auto main() -> int {
 
     // connect to server
     {
-        const auto xmpp_conn = xmpp::create(host, [ws_conn](const std::string_view str) {
+        const auto xmpp_conn = xmpp::create(args.host, [ws_conn](const std::string_view str) {
             ws::send_str(ws_conn, str);
         });
         ws::add_receiver(ws_conn, [xmpp_conn, &event](const std::span<std::byte> data) -> ws::ReceiverResult {
@@ -71,7 +101,7 @@ auto main() -> int {
         auto callbacks           = ConferenceCallbacks();
         callbacks.ws_conn        = ws_conn;
         callbacks.jingle_handler = &jingle_handler;
-        const auto conference    = conference::Conference::create(room, jid, &callbacks);
+        const auto conference    = conference::Conference::create(args.room, jid, &callbacks);
 
         ws::add_receiver(ws_conn, [&conference, &event](const std::span<std::byte> data) -> ws::ReceiverResult {
             const auto done = conference->feed_payload(std::string_view((char*)data.data(), data.size()));
