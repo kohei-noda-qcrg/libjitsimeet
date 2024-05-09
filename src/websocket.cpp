@@ -67,7 +67,7 @@ auto xmpp_callback(lws* wsi, lws_callback_reasons reason, void* const /*user*/, 
         conn->conn_state = ConnectionState::Destroyed;
         break;
     case LWS_CALLBACK_CLIENT_RECEIVE: {
-        if(config::debug_websocket) {
+        if(config::dump_websocket_packets) {
             auto str = std::string_view(std::bit_cast<char*>(in));
             PRINT(">>> ", str);
         }
@@ -173,7 +173,7 @@ auto free_connection(Connection* const conn) -> void {
 }
 
 auto send_str(Connection* const conn, const std::string_view str) -> void {
-    if(config::debug_websocket) {
+    if(config::dump_websocket_packets) {
         PRINT("<<< ", str);
     }
     write_back_str(conn->wsi, str);

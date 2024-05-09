@@ -138,7 +138,6 @@ auto main(const int argc, const char* const argv[]) -> int {
         }
         // TODO: initiate colibri
 
-        auto count = 0;
         while(true) {
             const auto iq = xmpp::elm::iq.clone()
                                 .append_attrs({
