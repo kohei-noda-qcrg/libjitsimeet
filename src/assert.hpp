@@ -8,7 +8,7 @@
 
 #define assert_v(cond, ret, ...) \
     if(!(cond)) {                \
-        PRINT(__VA_ARGS__);      \
+        WARN(__VA_ARGS__);       \
         return ret;              \
     }
 
