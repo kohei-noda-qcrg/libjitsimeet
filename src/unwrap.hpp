@@ -11,7 +11,7 @@
 #define unwrap_ov(var, opt, const, ret, ...) \
     const auto var##_o = opt;                \
     if(!var##_o.has_value()) {               \
-        WARN(__VA_ARGS__);                  \
+        WARN(__VA_ARGS__);                   \
         return ret;                          \
     }                                        \
     const auto& var = *var##_o;
@@ -26,7 +26,7 @@
 #define unwrap_pv(var, opt, const, ret, ...) \
     const auto var##_p = opt;                \
     if(var##_p == nullptr) {                 \
-        PRINT(__VA_ARGS__);                  \
+        WARN(__VA_ARGS__);                   \
         return ret;                          \
     }                                        \
     const auto& var = *var##_p;
