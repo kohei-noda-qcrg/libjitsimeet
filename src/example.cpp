@@ -46,13 +46,13 @@ auto main() -> int {
     // connet to server
     {
         const auto xmpp_conn = xmpp::create(host, ws_tx);
-        ws::add_rx(ws_conn, [xmpp_conn, &event](const std::span<std::byte> data) -> ws::RxResult {
+        ws::add_receiver(ws_conn, [xmpp_conn, &event](const std::span<std::byte> data) -> ws::ReceiverResult {
             const auto done = xmpp::resume_negotiation(xmpp_conn, std::string_view((char*)data.data(), data.size()));
             if(done) {
                 event.wakeup();
-                return ws::RxResult::Complete;
+                return ws::ReceiverResult::Complete;
             }
-            return ws::RxResult::Handled;
+            return ws::ReceiverResult::Handled;
         });
         xmpp::start_negotiation(xmpp_conn);
         event.wait();
@@ -75,13 +75,13 @@ auto main() -> int {
         callbacks.jingle_handler = &jingle_handler;
         const auto conference    = conference::Conference::create(room, jid, &callbacks);
 
-        ws::add_rx(ws_conn, [&conference, &event](const std::span<std::byte> data) -> ws::RxResult {
+        ws::add_receiver(ws_conn, [&conference, &event](const std::span<std::byte> data) -> ws::ReceiverResult {
             const auto done = conference->feed_payload(std::string_view((char*)data.data(), data.size()));
             if(done) {
                 event.wakeup();
-                return ws::RxResult::Complete;
+                return ws::ReceiverResult::Complete;
             }
-            return ws::RxResult::Handled;
+            return ws::ReceiverResult::Handled;
         });
         conference->start_negotiation();
         event.wait();

@@ -15,11 +15,11 @@ enum class ConnectionState {
 };
 
 struct Connection {
-    lws_context*    context;
-    lws*            wsi;
-    std::vector<Rx> rxs;
-    ConnectionState conn_state;
-    std::thread     worker;
+    lws_context*          context;
+    lws*                  wsi;
+    std::vector<Receiver> receivers;
+    ConnectionState       conn_state;
+    std::thread           worker;
 };
 
 namespace {
@@ -71,16 +71,16 @@ auto xmpp_callback(lws* wsi, lws_callback_reasons reason, void* const /*user*/, 
             auto str = std::string_view(std::bit_cast<char*>(in));
             PRINT(">>> ", str);
         }
-        auto&      rxs  = conn->rxs;
+        auto&      rxs  = conn->receivers;
         const auto data = std::span<std::byte>(std::bit_cast<std::byte*>(in), len);
         for(auto i = rxs.begin(); i < rxs.end(); i += 1) {
             switch((*i)(data)) {
-            case RxResult::Ignored:
+            case ReceiverResult::Ignored:
                 break;
-            case RxResult::Complete:
+            case ReceiverResult::Complete:
                 i = rxs.erase(i);
                 [[fallthrough]];
-            case RxResult::Handled:
+            case ReceiverResult::Handled:
                 i = rxs.end();
                 break;
             }
@@ -182,7 +182,7 @@ auto send_str(Connection* const conn, const std::string_view str) -> void {
     write_back_str(conn->wsi, str);
 }
 
-auto add_rx(Connection* conn, Rx rx) -> void {
-    conn->rxs.push_back(rx);
+auto add_receiver(Connection* conn, const Receiver receiver) -> void {
+    conn->receivers.push_back(receiver);
 }
 } // namespace ws
