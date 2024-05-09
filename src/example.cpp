@@ -5,6 +5,14 @@
 #include "websocket.hpp"
 #include "xmpp/connection.hpp"
 
+struct XMPPNegotiatorCallbacks : public xmpp::NegotiatorCallbacks {
+    ws::Connection* ws_conn;
+
+    virtual auto send_payload(std::string_view payload) -> void override {
+        ws::send_str(ws_conn, payload);
+    }
+};
+
 struct ConferenceCallbacks : public conference::ConferenceCallbacks {
     ws::Connection* ws_conn;
     JingleHandler*  jingle_handler;
@@ -69,25 +77,26 @@ auto main(const int argc, const char* const argv[]) -> int {
     auto jid    = xmpp::Jid();
     auto ext_sv = std::vector<xmpp::Service>();
 
-    // connect to server
+    // gain jid from server
     {
-        const auto xmpp_conn = xmpp::create(args.host, [ws_conn](const std::string_view str) {
-            ws::send_str(ws_conn, str);
-        });
-        ws::add_receiver(ws_conn, [xmpp_conn, &event](const std::span<std::byte> data) -> ws::ReceiverResult {
-            const auto done = xmpp::resume_negotiation(xmpp_conn, std::string_view((char*)data.data(), data.size()));
+        auto callbacks        = XMPPNegotiatorCallbacks();
+        callbacks.ws_conn     = ws_conn;
+        const auto negotiator = xmpp::Negotiator::create(args.host, &callbacks);
+        ws::add_receiver(ws_conn, [&negotiator, &event](const std::span<std::byte> data) -> ws::ReceiverResult {
+            const auto payload = std::string_view(std::bit_cast<char*>(data.data()), data.size());
+            const auto done    = negotiator->feed_payload(payload);
             if(done) {
                 event.wakeup();
                 return ws::ReceiverResult::Complete;
+            } else {
+                return ws::ReceiverResult::Handled;
             }
-            return ws::ReceiverResult::Handled;
         });
-        xmpp::start_negotiation(xmpp_conn);
+        negotiator->start_negotiation();
         event.wait();
 
-        auto res = xmpp::finish(xmpp_conn);
-        jid      = std::move(res.jid);
-        ext_sv   = std::move(res.external_services);
+        jid    = std::move(negotiator->jid);
+        ext_sv = std::move(negotiator->external_services);
     }
 
     event.clear();
@@ -102,14 +111,14 @@ auto main(const int argc, const char* const argv[]) -> int {
         callbacks.ws_conn        = ws_conn;
         callbacks.jingle_handler = &jingle_handler;
         const auto conference    = conference::Conference::create(args.room, jid, &callbacks);
-
         ws::add_receiver(ws_conn, [&conference, &event](const std::span<std::byte> data) -> ws::ReceiverResult {
             const auto done = conference->feed_payload(std::string_view((char*)data.data(), data.size()));
             if(done) {
                 event.wakeup();
                 return ws::ReceiverResult::Complete;
+            } else {
+                return ws::ReceiverResult::Handled;
             }
-            return ws::ReceiverResult::Handled;
         });
         conference->start_negotiation();
         event.wait();
