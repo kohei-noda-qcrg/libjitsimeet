@@ -11,6 +11,7 @@ libjitsimeet_src = files(
   'caps.cpp',
   'sha.cpp',
   'base64.cpp',
+  'random.cpp',
   'websocket.cpp',
   'xmpp/negotiator.cpp',
   'xmpp/jid.cpp',
