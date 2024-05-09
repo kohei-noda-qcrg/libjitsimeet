@@ -89,7 +89,7 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
             break;
         }
         if(config::debug_xmpp_connection) {
-            print("jid: ", self.jid.as_full());
+            PRINT("jid: ", self.jid.as_full());
         }
     }
     // disco
