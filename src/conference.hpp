@@ -1,4 +1,6 @@
 #pragma once
+#include <functional>
+
 #include "jingle/jingle.hpp"
 #include "util/coroutine.hpp"
 #include "util/string-map.hpp"
@@ -28,6 +30,11 @@ struct ConferenceCallbacks {
     }
 };
 
+struct SentIq {
+    std::string               id;
+    std::function<void(bool)> on_result; // optional
+};
+
 struct Conference {
     using Worker = CoRoutine<bool>;
 
@@ -46,14 +53,14 @@ struct Conference {
     Worker           worker;
 
     // state
-    std::string            jingle_accept_iq_id;
+    std::vector<SentIq>    sent_iqs;
     StringMap<Participant> participants;
     int                    iq_serial;
 
     auto generate_iq_id() -> std::string;
     auto start_negotiation() -> void;
     auto feed_payload(std::string_view payload) -> bool;
-    auto send_jingle_accept(jingle::Jingle jingle) -> void;
+    auto send_iq(xml::Node iq, std::function<void(bool)> on_result) -> void;
 
     static auto create(std::string_view room, const xmpp::Jid& jid, ConferenceCallbacks* callbacks) -> std::unique_ptr<Conference>;
 

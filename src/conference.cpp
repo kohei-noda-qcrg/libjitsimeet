@@ -101,9 +101,6 @@ auto handle_iq_get(Conference* const conf, const xml::Node& iq) -> bool {
 }
 
 auto handle_iq_set(Conference* const conf, const xml::Node& iq) -> bool {
-    // TODO
-    PRINT("got iq set");
-
     unwrap_ob(from, iq.find_attr("from"));
     unwrap_ob(from_jid, xmpp::Jid::parse(from));
     if(from_jid.resource != "focus") {
@@ -122,7 +119,7 @@ auto handle_iq_set(Conference* const conf, const xml::Node& iq) -> bool {
         conf->callbacks->on_jingle_add_source(std::move(jingle));
         goto ack;
     default:
-        PRINT("not implemented");
+        WARN("unimplemented jingle action: ", int(jingle.action));
         return true;
     }
 
@@ -138,19 +135,23 @@ ack:
     return true;
 }
 
-auto handle_iq_result(Conference* const conf, const xml::Node& iq) -> bool {
-    // TODO
-    PRINT("got iq result");
+auto handle_iq_result(Conference* const conf, const xml::Node& iq, bool success) -> bool {
     unwrap_ob(id, iq.find_attr("id"));
-    if(id == conf->jingle_accept_iq_id) {
-        conf->jingle_accept_iq_id.clear();
-        // TODO initiate colibri
-    } else {
-        PRINT("stray iq result");
-        return false;
+    for(auto i = conf->sent_iqs.begin(); i != conf->sent_iqs.end(); i += 1) {
+        if(i->id != id) {
+            continue;
+        }
+        if(!success) {
+            WARN("iq ", id, " failed");
+        }
+        if(i->on_result) {
+            i->on_result(success);
+        }
+        conf->sent_iqs.erase(i);
+        return true;
     }
-
-    return true;
+    WARN("stray iq result");
+    return false;
 }
 
 auto handle_iq(Conference* const conf, const xml::Node& iq) -> bool {
@@ -160,7 +161,9 @@ auto handle_iq(Conference* const conf, const xml::Node& iq) -> bool {
     } else if(type == "set") {
         return handle_iq_set(conf, iq);
     } else if(type == "result") {
-        return handle_iq_result(conf, iq);
+        return handle_iq_result(conf, iq, true);
+    } else if(type == "error") {
+        return handle_iq_result(conf, iq, false);
     }
     return false;
 }
@@ -354,20 +357,15 @@ auto Conference::feed_payload(const std::string_view payload) -> bool {
     worker.resume();
     return worker.done();
 }
-auto Conference::send_jingle_accept(const jingle::Jingle jingle) -> void {
-    jingle_accept_iq_id  = generate_iq_id();
-    const auto accept_iq = xmpp::elm::iq.clone()
-                               .append_attrs({
-                                   {"from", jid.as_full()},
-                                   {"to", muc_local_focus_jid.as_full()},
-                                   {"id", jingle_accept_iq_id},
-                                   {"type", "set"},
-                               })
-                               .append_children({
-                                   jingle::deparse(jingle),
-                               });
 
-    callbacks->send_payload(xml::deparse(accept_iq));
+auto Conference::send_iq(xml::Node node, std::function<void(bool)> on_result) -> void {
+    const auto id = generate_iq_id();
+    node.append_attrs({{"id", id}});
+    sent_iqs.push_back(SentIq{
+        .id        = id,
+        .on_result = on_result,
+    });
+    callbacks->send_payload(xml::deparse(node));
 }
 
 auto Conference::create(const std::string_view     room,

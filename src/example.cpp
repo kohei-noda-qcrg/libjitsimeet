@@ -1,3 +1,4 @@
+#include "assert.hpp"
 #include "conference.hpp"
 #include "jingle-handler/jingle.hpp"
 #include "util/event.hpp"
@@ -119,20 +120,34 @@ auto main(const int argc, const char* const argv[]) -> int {
         });
         conference->start_negotiation();
         event.wait();
-        conference->send_jingle_accept(jingle_handler.build_accept_jingle().value());
+        {
+            auto accept    = jingle_handler.build_accept_jingle().value();
+            auto accept_iq = xmpp::elm::iq.clone()
+                                 .append_attrs({
+                                     {"from", jid.as_full()},
+                                     {"to", conference->muc_local_focus_jid.as_full()},
+                                     {"type", "set"},
+                                 })
+                                 .append_children({
+                                     jingle::deparse(accept),
+                                 });
+
+            conference->send_iq(std::move(accept_iq), [](bool success) -> void {
+                DYN_ASSERT(success, "failed to send accept iq");
+            });
+        }
+        // TODO: initiate colibri
 
         auto count = 0;
         while(true) {
-            const auto id = build_string("ping_", count += 1);
             const auto iq = xmpp::elm::iq.clone()
                                 .append_attrs({
-                                    {"id", id},
                                     {"type", "get"},
                                 })
                                 .append_children({
                                     xmpp::elm::ping,
                                 });
-            ws::send_str(ws_conn, xml::deparse(iq));
+            conference->send_iq(iq, {});
             std::this_thread::sleep_for(std::chrono::seconds(10));
         }
     }
