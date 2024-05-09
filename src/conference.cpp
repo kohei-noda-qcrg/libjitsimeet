@@ -324,7 +324,6 @@ loop:
             yield = handle_presence(conf, response);
         } else {
             PRINT("not implemented");
-            // xml::dump_node(response);
         }
     } while(0);
     co_yield yield;
