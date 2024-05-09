@@ -91,7 +91,7 @@ auto parse_rtcp_fb(const xml::Node& node) -> std::optional<Jingle::Content::RTPD
         } else if(a.key == "subtype") {
             r.subtype = a.value;
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns::rtp_rtcp_fb, "unsupported xmlns ", a.value)
+            assert_o(a.value == ns::rtp_rtcp_fb, "unsupported xmlns ", a.value);
         } else {
             WARN("unhandled attribute ", a.key);
         }
@@ -146,7 +146,7 @@ auto parse_source(const xml::Node& node) -> std::optional<Jingle::Content::RTPDe
             num_or_nullopt(r.ssrc, a.value);
             found_ssrc = true;
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns::rtp_ssma, "unsupported xmlns ", a.value)
+            assert_o(a.value == ns::rtp_ssma, "unsupported xmlns ", a.value);
         } else if(a.key == "name") {
             // ignore
         } else {
@@ -191,7 +191,7 @@ auto parse_rtp_header_ext(const xml::Node& node) -> std::optional<Jingle::Conten
             r.uri     = a.value;
             found_uri = true;
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns::rtp_headerext, "unsupported xmlns ", a.value)
+            assert_o(a.value == ns::rtp_headerext, "unsupported xmlns ", a.value);
         } else {
             WARN("unhandled attribute ", a.key);
         }
@@ -215,7 +215,7 @@ auto parse_ssrc_group(const xml::Node& node) -> std::optional<Jingle::Content::R
             search_str_array_or_null(ssrc_group_semantics_str, r.semantics, a.value);
             found_semantics = true;
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns::rtp_ssma, "unsupported xmlns ", a.value)
+            assert_o(a.value == ns::rtp_ssma, "unsupported xmlns ", a.value);
         } else {
             WARN("unhandled attribute ", a.key);
         }
@@ -245,7 +245,7 @@ auto parse_rtp_description(const xml::Node& node) -> std::optional<Jingle::Conte
         if(a.key == "media") {
             r.media = a.value;
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns::rtp, "unsupported xmlns ", a.value)
+            assert_o(a.value == ns::rtp, "unsupported xmlns ", a.value);
         } else if(a.key == "ssrc") {
             num_or_nullopt(r.ssrc, a.value);
         } else if(a.key == "maxptime") {
@@ -301,7 +301,7 @@ auto parse_fingerprint(const xml::Node& node) -> std::optional<Jingle::Content::
                 return std::nullopt;
             }
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns::dtls, "unsupported xmlns ", a.value)
+            assert_o(a.value == ns::dtls, "unsupported xmlns ", a.value);
         } else {
             WARN("unhandled attribute ", a.key);
         }
@@ -395,7 +395,7 @@ auto parse_ice_udp_transport(const xml::Node& node) -> std::optional<Jingle::Con
             r.ufrag     = a.value;
             found_ufrag = true;
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns::transport_ice_udp, "unsupported xmlns ", a.value)
+            assert_o(a.value == ns::transport_ice_udp, "unsupported xmlns ", a.value);
         } else {
             WARN("unhandled attribute ", a.key);
         }
@@ -484,7 +484,7 @@ auto parse_group(const xml::Node& node) -> std::optional<Jingle::Group> {
             search_str_array_or_null(group_semantics_str, r.semantics, a.value);
             found_semantics = true;
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns::grouping, "unsupported xmlns ", a.value)
+            assert_o(a.value == ns::grouping, "unsupported xmlns ", a.value);
         } else {
             WARN("unhandled attribute ", a.key);
         }
@@ -520,7 +520,7 @@ auto parse(const xml::Node& node) -> std::optional<Jingle> {
         } else if(a.key == "responder") {
             r.responder = a.value;
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns::jingle, "unsupported xmlns ", a.value)
+            assert_o(a.value == ns::jingle, "unsupported xmlns ", a.value);
         } else {
             WARN("unhandled attribute ", a.key);
         }
