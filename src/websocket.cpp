@@ -111,6 +111,8 @@ auto connection_worker_main(Connection* const conn) -> void {
 } // namespace
 
 auto create_connection(const char* const address, const char* const path, const bool secure) -> Connection* {
+    lws_set_log_level(config::libws_loglevel_bitmap, NULL);
+
     auto conn = std::make_unique<Connection>(Connection({
         .context    = NULL,
         .wsi        = NULL,
