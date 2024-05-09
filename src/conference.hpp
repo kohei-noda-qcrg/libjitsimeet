@@ -55,7 +55,7 @@ struct Conference {
     // state
     std::vector<SentIq>    sent_iqs;
     StringMap<Participant> participants;
-    int                    iq_serial;
+    static inline int      iq_serial;
 
     auto generate_iq_id() -> std::string;
     auto start_negotiation() -> void;

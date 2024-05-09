@@ -400,7 +400,6 @@ auto Conference::create(const std::string_view     room,
             .resource = "focus",
         },
         .callbacks = callbacks,
-        .iq_serial = 0,
     };
 
     const auto disco_str      = compute_disco_str(disco_info);
