@@ -1,4 +1,4 @@
-#include "connection.hpp"
+#include "negotiator.hpp"
 #include "../assert.hpp"
 #include "../config.hpp"
 #include "../util/coroutine.hpp"

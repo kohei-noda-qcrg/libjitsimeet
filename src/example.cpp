@@ -3,7 +3,7 @@
 #include "util/event.hpp"
 #include "util/print.hpp"
 #include "websocket.hpp"
-#include "xmpp/connection.hpp"
+#include "xmpp/negotiator.hpp"
 #include "xmpp/elements.hpp"
 
 struct XMPPNegotiatorCallbacks : public xmpp::NegotiatorCallbacks {
