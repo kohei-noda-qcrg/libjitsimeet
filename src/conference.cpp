@@ -102,7 +102,7 @@ auto handle_iq_get(Conference* const conf, const xml::Node& iq) -> bool {
 
 auto handle_iq_set(Conference* const conf, const xml::Node& iq) -> bool {
     // TODO
-    print("got iq set");
+    PRINT("got iq set");
 
     unwrap_ob(from, iq.find_attr("from"));
     unwrap_ob(from_jid, xmpp::Jid::parse(from));
@@ -113,7 +113,7 @@ auto handle_iq_set(Conference* const conf, const xml::Node& iq) -> bool {
     unwrap_pb(jingle_node, iq.find_first_child("jingle"));
     unwrap_ob_mut(jingle, jingle::parse(jingle_node));
 
-    print("jingle action ", *jingle_node.find_attr("action"));
+    PRINT("jingle action ", *jingle_node.find_attr("action"));
     switch(jingle.action) {
     case jingle::Jingle::Action::SessionInitiate:
         conf->callbacks->on_jingle_initiate(std::move(jingle));
@@ -122,7 +122,7 @@ auto handle_iq_set(Conference* const conf, const xml::Node& iq) -> bool {
         conf->callbacks->on_jingle_add_source(std::move(jingle));
         goto ack;
     default:
-        print("not implemented");
+        PRINT("not implemented");
         return true;
     }
 
@@ -140,7 +140,7 @@ ack:
 
 auto handle_iq_result(Conference* const conf, const xml::Node& iq) -> bool {
     // TODO
-    print("got iq result");
+    PRINT("got iq result");
     unwrap_ob(id, iq.find_attr("id"));
     if(id == conf->jingle_accept_iq_id) {
         conf->jingle_accept_iq_id.clear();
@@ -171,7 +171,7 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
 
     unwrap_ob(from_str, presence.find_attr("from"));
     unwrap_ob(from, xmpp::Jid::parse(from_str));
-    print("got presence from ", from_str);
+    PRINT("got presence from ", from_str);
     if(const auto type = presence.find_attr("type"); type) {
         if(*type == "unavailable") {
             if(const auto i = conf->participants.find(from.resource); i != conf->participants.end()) {
