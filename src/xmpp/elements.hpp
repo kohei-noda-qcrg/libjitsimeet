@@ -92,12 +92,6 @@ inline const auto feature = xml::Node{
         // var
     },
 };
-inline const auto muc = xml::Node{
-    .name  = "x",
-    .attrs = {
-        {"xmlns", ns::muc},
-    },
-};
 inline const auto caps = xml::Node{
     .name  = "c",
     .attrs = {
@@ -105,6 +99,18 @@ inline const auto caps = xml::Node{
         // hash
         // node
         // ver
+    },
+};
+inline const auto nick = xml::Node{
+    .name  = "nick",
+    .attrs = {
+        {"xmlns", ns::nick},
+    },
+};
+inline const auto muc = xml::Node{
+    .name  = "x",
+    .attrs = {
+        {"xmlns", ns::muc},
     },
 };
 inline const auto ecaps2 = xml::Node{
@@ -120,10 +126,10 @@ inline const auto hash = xml::Node{
         // algo
     },
 };
-inline const auto nick = xml::Node{
-    .name  = "nick",
+inline const auto ping = xml::Node{
+    .name  = "ping",
     .attrs = {
-        {"xmlns", ns::nick},
+        {"xmlns", "urn:xmpp:ping"},
     },
 };
 } // namespace xmpp::elm
