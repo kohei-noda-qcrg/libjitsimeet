@@ -3,6 +3,7 @@ subdir('xml')
 libjitsimeet_deps = [
   dependency('libwebsockets'),
   dependency('openssl'),
+  dependency('nice'),
 ]
 
 libjitsimeet_src = files(
@@ -16,4 +17,9 @@ libjitsimeet_src = files(
   'xmpp/extdisco.cpp',
   'jingle/parser.cpp',
   'jingle/deparser.cpp',
+  'jingle-handler/jingle.cpp',
+  'jingle-handler/cert.cpp',
+  'jingle-handler/pem.cpp',
+  'jingle-handler/hostaddr.cpp',
+  'jingle-handler/ice.cpp',
 ) + tinyxml_src

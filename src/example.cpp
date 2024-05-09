@@ -1,4 +1,5 @@
 #include "conference.hpp"
+#include "jingle-handler/jingle.hpp"
 #include "util/event.hpp"
 #include "util/print.hpp"
 #include "websocket.hpp"
@@ -6,17 +7,18 @@
 
 struct ConferenceCallbacks : public conference::ConferenceCallbacks {
     ws::Connection* ws_conn;
+    JingleHandler*  jingle_handler;
 
     virtual auto send_payload(std::string_view payload) -> void override {
         ws::send_str(ws_conn, payload);
     }
 
     virtual auto on_jingle_initiate(jingle::Jingle jingle) -> bool override {
-        return true;
+        return jingle_handler->on_initiate(std::move(jingle));
     }
 
     virtual auto on_jingle_add_source(jingle::Jingle jingle) -> bool override {
-        return true;
+        return jingle_handler->on_add_source(std::move(jingle));
     }
 
     virtual auto on_participant_joined(const conference::Participant& participant) -> void override {
@@ -37,8 +39,9 @@ auto main() -> int {
         ws::send_str(ws_conn, str);
     };
 
-    auto event = Event();
-    auto jid   = xmpp::Jid();
+    auto event  = Event();
+    auto jid    = xmpp::Jid();
+    auto ext_sv = std::vector<xmpp::Service>();
 
     // connet to server
     {
@@ -53,16 +56,24 @@ auto main() -> int {
         });
         xmpp::start_negotiation(xmpp_conn);
         event.wait();
-        jid = xmpp::finish(xmpp_conn).jid;
+
+        auto res = xmpp::finish(xmpp_conn);
+        jid      = std::move(res.jid);
+        ext_sv   = std::move(res.external_services);
     }
 
     event.clear();
 
     // join conference
     {
-        auto callbacks        = ConferenceCallbacks();
-        callbacks.ws_conn     = ws_conn;
-        const auto conference = conference::Conference::create(room, jid, &callbacks);
+        constexpr auto audio_codec_type = CodecType::Opus;
+        constexpr auto video_codec_type = CodecType::H264;
+
+        auto jingle_handler      = JingleHandler(audio_codec_type, video_codec_type, jid, ext_sv, &event);
+        auto callbacks           = ConferenceCallbacks();
+        callbacks.ws_conn        = ws_conn;
+        callbacks.jingle_handler = &jingle_handler;
+        const auto conference    = conference::Conference::create(room, jid, &callbacks);
 
         ws::add_rx(ws_conn, [&conference, &event](const std::span<std::byte> data) -> ws::RxResult {
             const auto done = conference->feed_payload(std::string_view((char*)data.data(), data.size()));
@@ -74,6 +85,17 @@ auto main() -> int {
         });
         conference->start_negotiation();
         event.wait();
+        conference->send_jingle_accept(jingle_handler.build_accept_jingle().value());
+
+        auto count = 1;
+        while(true) {
+            const auto payload = build_string(R"(<iq xmlns='jabber:client' id=")", "ping_",
+                                              count += 1,
+                                              R"(" type="get"><ping xmlns='urn:xmpp:ping'/></iq>)");
+            ws_tx(payload);
+            std::this_thread::sleep_for(std::chrono::seconds(10));
+        }
     }
+
     return 0;
 }
