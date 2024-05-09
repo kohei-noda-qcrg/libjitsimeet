@@ -37,7 +37,7 @@ inline const auto action_str = make_str_table<Jingle::Action>({
     {Jingle::Action::SourceRemove, "source-remove"},
 });
 
-const auto ssrc_group_semantics_str = make_str_table<Jingle::Content::RTPDescription::SSRCGroup::Semantics>({
+inline const auto ssrc_group_semantics_str = make_str_table<Jingle::Content::RTPDescription::SSRCGroup::Semantics>({
     {Jingle::Content::RTPDescription::SSRCGroup::Semantics::Ls, "LS"},
     {Jingle::Content::RTPDescription::SSRCGroup::Semantics::Fid, "FID"},
     {Jingle::Content::RTPDescription::SSRCGroup::Semantics::Srf, "SRF"},
@@ -46,24 +46,23 @@ const auto ssrc_group_semantics_str = make_str_table<Jingle::Content::RTPDescrip
     {Jingle::Content::RTPDescription::SSRCGroup::Semantics::Ddp, "DDP"},
 });
 
-const auto group_semantics_str = make_str_table<Jingle::Group::Semantics>({
+inline const auto group_semantics_str = make_str_table<Jingle::Group::Semantics>({
     {Jingle::Group::Semantics::LipSync, "LS"},
     {Jingle::Group::Semantics::Bundle, "BUNDLE"},
 });
 
-const auto candidate_type_str = make_str_table<Jingle::Content::IceUdpTransport::Candidate::Type>({
+inline const auto candidate_type_str = make_str_table<Jingle::Content::IceUdpTransport::Candidate::Type>({
     {Jingle::Content::IceUdpTransport::Candidate::Type::Host, "host"},
     {Jingle::Content::IceUdpTransport::Candidate::Type::Prflx, "prflx"},
     {Jingle::Content::IceUdpTransport::Candidate::Type::Relay, "relay"},
     {Jingle::Content::IceUdpTransport::Candidate::Type::Srflx, "srflx"},
 });
 
-const auto content_senders_str = make_str_table<Jingle::Content::Senders>({
+inline const auto content_senders_str = make_str_table<Jingle::Content::Senders>({
     {Jingle::Content::Senders::Both, "both"},
     {Jingle::Content::Senders::Initiator, "initiator"},
     {Jingle::Content::Senders::Responder, "responder"},
     {Jingle::Content::Senders::None, "none"},
 });
-
 } // namespace
 } // namespace jingle
