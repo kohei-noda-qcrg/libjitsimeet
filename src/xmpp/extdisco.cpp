@@ -35,36 +35,34 @@ auto parse_service(const xml::Node& node) -> std::optional<Service> {
         } else if(a.key == "port") {
             num_or_nullopt(r.port, a.value);
         } else if(a.key == "restricted") {
-            // TODO
-            // should be a.value.tolower() == "parse"
+            // TODO: should be a.value.tolower() == "parse"
             if(a.value == "1" || a.value == "parse") {
                 r.restricted = true;
             } else if(a.value == "0") {
                 r.restricted = false;
             } else {
-                PRINT("unknown restricted");
+                WARN("unknown restricted");
                 return std::nullopt;
             }
         } else {
-            PRINT("unhandled attribute ", a.key);
+            WARN("unhandled attribute ", a.key);
         }
     }
     if(!found_type || !found_host) {
-        PRINT("required attributes not found");
+        WARN("required attributes not found");
         return std::nullopt;
     }
     for(const auto& c : node.children) {
         if(0) {
         } else {
-            PRINT("unhandled child ", c.name);
+            WARN("unhandled child ", c.name);
         }
     }
     return r;
 }
 } // namespace
 auto parse_services(const xml::Node& services) -> std::optional<std::vector<Service>> {
-    // TODO
-    // check xmlns
+    // TODO: check xmlns
     auto r = std::vector<Service>();
     for(const auto& service : services.children) {
         if(service.name != "service") {
@@ -73,7 +71,7 @@ auto parse_services(const xml::Node& services) -> std::optional<std::vector<Serv
         if(const auto s = parse_service(service); s) {
             r.push_back(*s);
         } else {
-            PRINT("failed to parse service");
+            WARN("failed to parse service");
             continue;
         }
     }
