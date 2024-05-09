@@ -52,7 +52,7 @@ auto parse_template(const xml::Node& node) -> std::optional<T> {
     }
 
 template <bool optional_value>
-auto parse_parameter(const xml::Node& node) -> std::optional<Parameter<optional_value>> {
+auto parse_parameter(const xml::Node& node, const std::string_view ns) -> std::optional<Parameter<optional_value>> {
     auto r           = Parameter<optional_value>{};
     auto found_name  = false;
     auto found_value = false;
@@ -65,8 +65,7 @@ auto parse_parameter(const xml::Node& node) -> std::optional<Parameter<optional_
             r.value     = a.value;
             found_value = true;
         } else if(a.key == "xmlns") {
-            // TODO
-            // check ns
+            assert_o(a.value == ns, "unsupported xmlns ", a.value);
         } else {
             WARN("unhandled attribute ", a.key);
         }
@@ -130,7 +129,7 @@ auto parse_payload_type(const xml::Node& node) -> std::optional<Jingle::Content:
         if(c.name == "rtcp-fb") {
             unwrap_parsed_or_nullopt(parse_rtcp_fb(c), r.rtcp_fbs);
         } else if(c.name == "parameter") {
-            unwrap_parsed_or_nullopt(parse_parameter<false>(c), r.parameters);
+            unwrap_parsed_or_nullopt(parse_parameter<false>(c, {}), r.parameters);
         } else {
             WARN("unhandled child ", c.name);
         }
@@ -158,7 +157,7 @@ auto parse_source(const xml::Node& node) -> std::optional<Jingle::Content::RTPDe
     auto found_owner = false;
     for(const auto& c : node.children) {
         if(c.name == "parameter") {
-            unwrap_parsed_or_nullopt(parse_parameter<true>(c), r.parameters);
+            unwrap_parsed_or_nullopt(parse_parameter<true>(c, ns::rtp), r.parameters);
         } else if(c.name == "ssrc-info") {
             if(!c.is_attr_equal("xmlns", ns::jitsi_jitmeet)) {
                 WARN("invalid ssrc-info");
