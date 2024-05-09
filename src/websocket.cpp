@@ -43,7 +43,7 @@ auto xmpp_callback(lws* wsi, lws_callback_reasons reason, void* const /*user*/, 
         return 0;
     }
     if(len >= proto->rx_buffer_size) {
-        warn("rx packet size limit exceeded");
+        WARN("rx packet size limit exceeded");
     }
 
     const auto conn = std::bit_cast<Connection*>(proto->user);
