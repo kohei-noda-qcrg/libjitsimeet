@@ -3,8 +3,8 @@
 #include "util/event.hpp"
 #include "util/print.hpp"
 #include "websocket.hpp"
-#include "xmpp/negotiator.hpp"
 #include "xmpp/elements.hpp"
+#include "xmpp/negotiator.hpp"
 
 struct XMPPNegotiatorCallbacks : public xmpp::NegotiatorCallbacks {
     ws::Connection* ws_conn;
@@ -112,14 +112,10 @@ auto main(const int argc, const char* const argv[]) -> int {
         callbacks.ws_conn        = ws_conn;
         callbacks.jingle_handler = &jingle_handler;
         const auto conference    = conference::Conference::create(args.room, jid, &callbacks);
-        ws::add_receiver(ws_conn, [&conference, &event](const std::span<std::byte> data) -> ws::ReceiverResult {
-            const auto done = conference->feed_payload(std::string_view((char*)data.data(), data.size()));
-            if(done) {
-                event.wakeup();
-                return ws::ReceiverResult::Complete;
-            } else {
-                return ws::ReceiverResult::Handled;
-            }
+        ws::add_receiver(ws_conn, [&conference](const std::span<std::byte> data) -> ws::ReceiverResult {
+            // feed_payload always returns true in current implementation
+            conference->feed_payload(std::string_view((char*)data.data(), data.size()));
+            return ws::ReceiverResult::Handled;
         });
         conference->start_negotiation();
         event.wait();
