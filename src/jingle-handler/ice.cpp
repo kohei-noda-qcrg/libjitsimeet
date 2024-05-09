@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 
+#include "../config.hpp"
 #include "../unwrap.hpp"
 #include "hostaddr.hpp"
 #include "ice.hpp"
@@ -18,12 +19,11 @@ auto set_stun_turn(NiceAgent* const                     agent,
     for(const auto& es : external_services) {
         if(!stun && es.type == "stun") {
             const auto hostaddr = hostname_to_addr(es.host.data());
-            if(hostaddr.empty()) {
-                PRINT("failed to resolve stun server address ", es.host);
-                return false;
-            }
+            assert_b(!hostaddr.empty(), "failed to resolve stun server address ", es.host);
             const auto port = es.port != 0 ? es.port : default_stun_port;
-            PRINT("stun address: ", hostaddr, ":", port);
+            if(config::debug_ice) {
+                PRINT("stun address: ", hostaddr, ":", port);
+            }
             g_object_set(agent,
                          "stun-server", hostaddr.data(),
                          "stun-server-port", port,
@@ -31,12 +31,11 @@ auto set_stun_turn(NiceAgent* const                     agent,
             stun = true;
         } else if(!turn && es.type == "turns") {
             const auto hostaddr = hostname_to_addr(es.host.data());
-            if(hostaddr.empty()) {
-                PRINT("failed to resolve turn server address ", es.host);
-                return false;
-            }
+            assert_b(!hostaddr.empty(), "failed to resolve turn server address ", es.host);
             const auto port = es.port != 0 ? es.port : default_turn_port;
-            PRINT("turn address: ", hostaddr, ":", port);
+            if(config::debug_ice) {
+                PRINT("turn address: ", hostaddr, ":", port);
+            }
             if(nice_agent_set_relay_info(agent,
                                          stream_id,
                                          component_id,
@@ -45,7 +44,7 @@ auto set_stun_turn(NiceAgent* const                     agent,
                                          es.username.data(),
                                          es.password.data(),
                                          NICE_RELAY_TYPE_TURN_TLS) != TRUE) {
-                PRINT("failed to set relay info");
+                WARN("failed to set relay info");
                 return false;
             }
             turn = true;
@@ -63,13 +62,15 @@ auto agent_recv_callback(NiceAgent* const agent,
                          const guint      len,
                          gchar* const     buf,
                          const gpointer   user_data) -> void {
-    // DEBUG
-    PRINT(buf);
+    if(config::debug_ice) {
+        PRINT("agent-recv: ", buf);
+    }
 }
 
 auto candidate_gathering_done(NiceAgent* const agent, const guint stream_id, const gpointer user_data) -> void {
-    // DEBUG
-    PRINT("candidate-gathering-done");
+    if(config::debug_ice) {
+        PRINT("candidate-gathering-done");
+    }
 }
 
 auto candidate_type_conv_table = std::array<std::pair<jingle::Jingle::Content::IceUdpTransport::Candidate::Type, NiceCandidateType>, 4>{{
@@ -92,7 +93,7 @@ auto set_remote_candidates(NiceAgent* const                                agent
         if(const auto addr = str_to_sockaddr(tc.ip_addr.data(), tc.port); addr.s.addr.sa_family != AF_UNSPEC) {
             nc->addr = addr;
         } else {
-            PRINT("failed to parse candidate ip address");
+            WARN("failed to parse candidate ip address");
             r = false;
             goto end;
         }
@@ -106,7 +107,7 @@ auto set_remote_candidates(NiceAgent* const                                agent
         list = g_slist_prepend(list, nc);
     }
     if(nice_agent_set_remote_candidates(agent, stream_id, component_id, list) != int(transport.candidates.size())) {
-        PRINT("failed to add candidates");
+        WARN("failed to add candidates");
         r = false;
         goto end;
     }
@@ -151,8 +152,7 @@ auto setup(const std::span<const xmpp::Service>                  external_servic
         assert_o(set_remote_candidates(agent, *transport, stream_id, component_id), "failed to add candidates");
     }
 
-    // DEBUG
-    nice_debug_enable(1);
+    nice_debug_enable(config::debug_ice ? TRUE : FALSE);
     return Agent{
         .mainloop        = std::move(mainloop_a),
         .agent           = std::move(agent_a),
