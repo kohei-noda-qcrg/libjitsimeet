@@ -35,17 +35,15 @@ auto main() -> int {
     constexpr auto room    = "room";
     const auto     ws_conn = ws::connect(host, (std::string("xmpp-websocket?room=") + room).data());
 
-    auto ws_tx = [ws_conn](const std::string_view str) {
-        ws::send_str(ws_conn, str);
-    };
-
     auto event  = Event();
     auto jid    = xmpp::Jid();
     auto ext_sv = std::vector<xmpp::Service>();
 
     // connet to server
     {
-        const auto xmpp_conn = xmpp::create(host, ws_tx);
+        const auto xmpp_conn = xmpp::create(host, [ws_conn](const std::string_view str) {
+            ws::send_str(ws_conn, str);
+        });
         ws::add_receiver(ws_conn, [xmpp_conn, &event](const std::span<std::byte> data) -> ws::ReceiverResult {
             const auto done = xmpp::resume_negotiation(xmpp_conn, std::string_view((char*)data.data(), data.size()));
             if(done) {
@@ -92,7 +90,7 @@ auto main() -> int {
             const auto payload = build_string(R"(<iq xmlns='jabber:client' id=")", "ping_",
                                               count += 1,
                                               R"(" type="get"><ping xmlns='urn:xmpp:ping'/></iq>)");
-            ws_tx(payload);
+            ws::send_str(ws_conn, payload);
             std::this_thread::sleep_for(std::chrono::seconds(10));
         }
     }
