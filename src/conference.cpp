@@ -306,28 +306,29 @@ auto handle_received(Conference* const conf) -> Conference::Worker::Generator {
     // idle
     auto buffer = std::string();
 loop:
+    auto yield = false;
     do {
         buffer += conf->worker_arg;
         const auto response_r = xml::parse(buffer);
         if(!response_r) {
             if(response_r.as_error() != xml::Error::Incomplete) {
                 buffer.clear();
-                print("xml parse error: ", int(response_r.as_error()));
+                PRINT("xml parse error: ", int(response_r.as_error()));
             }
             break;
         }
         buffer.clear();
         const auto& response = response_r.as_value();
         if(response.name == "iq") {
-            handle_iq(conf, response);
+            yield = handle_iq(conf, response);
         } else if(response.name == "presence") {
-            handle_presence(conf, response);
+            yield = handle_presence(conf, response);
         } else {
             PRINT("not implemented");
             // xml::dump_node(response);
         }
     } while(0);
-    co_yield true;
+    co_yield yield;
     goto loop;
 
     while(true) {
