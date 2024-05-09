@@ -316,7 +316,7 @@ auto JingleHandler::on_initiate(jingle::Jingle jingle) -> bool {
         PRINT(cert_pem.data());
         PRINT(priv_key_pem.data());
     }
-    // TODO
+    // TODO: generate random ssrcs
     const auto audio_ssrc     = uint32_t(3111629862);
     const auto video_ssrc     = uint32_t(2087854985);
     const auto video_rtx_ssrc = uint32_t(438931176);

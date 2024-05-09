@@ -249,7 +249,7 @@ auto parse_rtp_description(const xml::Node& node) -> std::optional<Jingle::Conte
         } else if(a.key == "ssrc") {
             num_or_nullopt(r.ssrc, a.value);
         } else if(a.key == "maxptime") {
-            // TODO
+            // TODO: handle maxptime
         } else {
             WARN("unhandled attribute ", a.key);
         }
