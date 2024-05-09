@@ -2,7 +2,6 @@
 #include "assert.hpp"
 #include "base64.hpp"
 #include "caps.hpp"
-#include "config.hpp"
 #include "jingle/jingle.hpp"
 #include "sha.hpp"
 #include "unwrap.hpp"
@@ -330,17 +329,6 @@ loop:
     } while(0);
     co_yield yield;
     goto loop;
-
-    while(true) {
-        if(config::debug_conference) {
-            PRINT("conference idle");
-            const auto response = xml::parse(conf->worker_arg).as_value();
-            // xml::dump_node(response);
-        }
-        co_yield true;
-    }
-
-    co_return true;
 }
 
 auto jid_node_to_muc_resource(const std::string_view node) -> std::string {
