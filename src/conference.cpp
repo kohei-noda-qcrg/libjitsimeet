@@ -2,6 +2,7 @@
 #include "assert.hpp"
 #include "base64.hpp"
 #include "caps.hpp"
+#include "config.hpp"
 #include "jingle/jingle.hpp"
 #include "sha.hpp"
 #include "unwrap.hpp"
@@ -110,7 +111,9 @@ auto handle_iq_set(Conference* const conf, const xml::Node& iq) -> bool {
     unwrap_pb(jingle_node, iq.find_first_child("jingle"));
     unwrap_ob_mut(jingle, jingle::parse(jingle_node));
 
-    PRINT("jingle action ", *jingle_node.find_attr("action"));
+    if(config::debug_conference) {
+        PRINT("jingle action ", int(jingle.action));
+    }
     switch(jingle.action) {
     case jingle::Jingle::Action::SessionInitiate:
         conf->callbacks->on_jingle_initiate(std::move(jingle));
@@ -169,19 +172,20 @@ auto handle_iq(Conference* const conf, const xml::Node& iq) -> bool {
 }
 
 auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool {
-    PRINT("presence");
     const auto response = xml::parse(conf->worker_arg).as_value();
 
     unwrap_ob(from_str, presence.find_attr("from"));
     unwrap_ob(from, xmpp::Jid::parse(from_str));
-    PRINT("got presence from ", from_str);
+    if(config::debug_conference) {
+        PRINT("got presence from ", from_str);
+    }
     if(const auto type = presence.find_attr("type"); type) {
         if(*type == "unavailable") {
             if(const auto i = conf->participants.find(from.resource); i != conf->participants.end()) {
                 conf->callbacks->on_participant_left(i->second);
                 conf->participants.erase(i);
             } else {
-                PRINT("got unavailable presence from unknown participant");
+                WARN("got unavailable presence from unknown participant");
             }
         }
         return true;
@@ -315,7 +319,7 @@ loop:
         if(!response_r) {
             if(response_r.as_error() != xml::Error::Incomplete) {
                 buffer.clear();
-                PRINT("xml parse error: ", int(response_r.as_error()));
+                WARN("xml parse error: ", int(response_r.as_error()));
             }
             break;
         }
@@ -326,7 +330,7 @@ loop:
         } else if(response.name == "presence") {
             yield = handle_presence(conf, response);
         } else {
-            PRINT("not implemented");
+            WARN("not implemented xmpp message ", response.name);
         }
     } while(0);
     co_yield yield;
