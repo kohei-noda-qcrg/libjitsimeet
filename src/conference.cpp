@@ -212,7 +212,7 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
     return true;
 }
 
-auto negotiate(Conference* const conf) -> Conference::Worker::Generator {
+auto handle_received(Conference* const conf) -> Conference::Worker::Generator {
     // disco
     {
         const auto id = conf->generate_iq_id();
@@ -357,7 +357,7 @@ auto Conference::generate_iq_id() -> std::string {
 }
 
 auto Conference::start_negotiation() -> void {
-    worker.start(negotiate, this);
+    worker.start(handle_received, this);
     worker.resume();
 }
 
