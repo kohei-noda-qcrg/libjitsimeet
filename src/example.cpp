@@ -33,7 +33,7 @@ struct ConferenceCallbacks : public conference::ConferenceCallbacks {
 auto main() -> int {
     constexpr auto host    = "jitsi.local";
     constexpr auto room    = "room";
-    const auto     ws_conn = ws::connect(host, (std::string("xmpp-websocket?room=") + room).data());
+    const auto     ws_conn = ws::create_connection(host, (std::string("xmpp-websocket?room=") + room).data(), false);
 
     auto event  = Event();
     auto jid    = xmpp::Jid();

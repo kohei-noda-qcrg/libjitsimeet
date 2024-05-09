@@ -14,7 +14,7 @@ enum class ReceiverResult {
 
 using Receiver = std::function<ReceiverResult(const std::span<std::byte>)>;
 
-auto connect(const char* address, const char* path) -> Connection*;
+auto create_connection(const char* address, const char* path, bool secure) -> Connection*;
 auto free_connection(Connection* conn) -> void;
 auto send_str(Connection* conn, std::string_view str) -> void;
 auto add_receiver(Connection* conn, Receiver receiver) -> void;

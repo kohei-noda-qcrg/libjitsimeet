@@ -110,7 +110,7 @@ auto connection_worker_main(Connection* const conn) -> void {
 
 } // namespace
 
-auto connect(const char* const address, const char* const path) -> Connection* {
+auto create_connection(const char* const address, const char* const path, const bool secure) -> Connection* {
     auto conn = std::make_unique<Connection>(Connection({
         .context    = NULL,
         .wsi        = NULL,
@@ -138,18 +138,15 @@ auto connect(const char* const address, const char* const path) -> Connection* {
     const auto context = lws_create_context(&context_creatin_info);
     DYN_ASSERT(context != NULL);
 
-    const auto port = 443;
-    const auto host = build_string(address, ":", port);
-
-    // DEBUG
-    // const auto use_ssl = LCCSCF_USE_SSL; // wss
-    const auto use_ssl = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
+    const auto port      = 443;
+    const auto host      = build_string(address, ":", port);
+    const auto ssl_flags = secure ? LCCSCF_USE_SSL : LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
 
     const auto client_connect_info = lws_client_connect_info{
         .context                   = context,
         .address                   = address,
         .port                      = port,
-        .ssl_connection            = use_ssl,
+        .ssl_connection            = ssl_flags,
         .path                      = path,
         .host                      = host.data(),
         .protocol                  = xmpp.name,
