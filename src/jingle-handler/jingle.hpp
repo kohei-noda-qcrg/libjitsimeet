@@ -84,8 +84,8 @@ class JingleHandler {
     auto on_add_source(jingle::Jingle jingle) -> bool;
 
     JingleHandler(CodecType                      audio_codec_type,
-                     CodecType                      video_codec_type,
-                     xmpp::Jid                      jid,
-                     std::span<const xmpp::Service> external_services,
-                     Event*                         sync);
+                  CodecType                      video_codec_type,
+                  xmpp::Jid                      jid,
+                  std::span<const xmpp::Service> external_services,
+                  Event*                         sync);
 };
