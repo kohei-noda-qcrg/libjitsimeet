@@ -9,6 +9,8 @@
 namespace xmpp {
 struct NegotiatorCallbacks {
     virtual auto send_payload(std::string_view /*payload*/) -> void = 0;
+
+    virtual ~NegotiatorCallbacks(){};
 };
 
 struct Negotiator {

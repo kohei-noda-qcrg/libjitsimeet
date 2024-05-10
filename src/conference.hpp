@@ -28,6 +28,8 @@ struct ConferenceCallbacks {
 
     virtual auto on_participant_left(const Participant& /*participant*/) -> void {
     }
+
+    virtual ~ConferenceCallbacks(){};
 };
 
 struct SentIq {
