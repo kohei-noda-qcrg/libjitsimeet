@@ -5,6 +5,7 @@
 
 #include "assert.hpp"
 #include "config.hpp"
+#include "event-buffer.hpp"
 #include "websocket.hpp"
 
 namespace ws {
@@ -15,11 +16,12 @@ enum class ConnectionState {
 };
 
 struct Connection {
-    lws_context*          context;
-    lws*                  wsi;
-    std::vector<Receiver> receivers;
-    ConnectionState       conn_state;
-    std::thread           worker;
+    lws_context*                context;
+    lws*                        wsi;
+    std::vector<Receiver>       receivers;
+    ConnectionState             conn_state;
+    std::thread                 worker;
+    CriticalBuffer<std::string> buffer_to_send;
 };
 
 namespace {
@@ -90,6 +92,9 @@ auto xmpp_callback(lws* wsi, lws_callback_reasons reason, void* const /*user*/, 
         if(config::debug_websocket) {
             PRINT(__func__, " writeable");
         }
+        for(auto& buf : conn->buffer_to_send.swap()) {
+            write_back_str(conn->wsi, buf);
+        }
         break;
     default:
         if(config::debug_websocket) {
@@ -103,6 +108,7 @@ auto xmpp_callback(lws* wsi, lws_callback_reasons reason, void* const /*user*/, 
 
 auto connection_worker_main(Connection* const conn) -> void {
     while(conn->conn_state != ConnectionState::Destroyed) {
+        PRINT("_WS_");
         lws_service(conn->context, 0);
     }
     lws_context_destroy(conn->context);
@@ -113,12 +119,11 @@ auto connection_worker_main(Connection* const conn) -> void {
 auto create_connection(const char* const address, const uint32_t port, const char* const path, const bool secure) -> Connection* {
     lws_set_log_level(config::libws_loglevel_bitmap, NULL);
 
-    auto conn = std::make_unique<Connection>(Connection({
+    auto conn = std::unique_ptr<Connection>(new Connection{
         .context    = NULL,
         .wsi        = NULL,
         .conn_state = ConnectionState::Initialized,
-        .worker     = {},
-    }));
+    });
 
     const auto xmpp = lws_protocols{
         .name           = "xmpp",
@@ -155,7 +160,6 @@ auto create_connection(const char* const address, const uint32_t port, const cha
     };
     const auto wsi = lws_client_connect_via_info(&client_connect_info);
     DYN_ASSERT(wsi != NULL);
-    lws_callback_on_writable(wsi);
 
     while(conn->conn_state == ConnectionState::Initialized) {
         lws_service(context, 50);
@@ -177,7 +181,8 @@ auto send_str(Connection* const conn, const std::string_view str) -> void {
     if(config::dump_websocket_packets) {
         PRINT("<<< ", str);
     }
-    write_back_str(conn->wsi, str);
+    conn->buffer_to_send.push(std::string(str));
+    lws_callback_on_writable(conn->wsi);
 }
 
 auto add_receiver(Connection* conn, const Receiver receiver) -> void {
