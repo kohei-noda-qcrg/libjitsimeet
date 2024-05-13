@@ -103,7 +103,7 @@ auto xmpp_callback(lws* wsi, lws_callback_reasons reason, void* const /*user*/, 
 
 auto connection_worker_main(Connection* const conn) -> void {
     while(conn->conn_state != ConnectionState::Destroyed) {
-        lws_service(conn->context, 50);
+        lws_service(conn->context, 0);
     }
     lws_context_destroy(conn->context);
 }
