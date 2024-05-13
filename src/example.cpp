@@ -1,4 +1,5 @@
 #include "assert.hpp"
+#include "colibri.hpp"
 #include "conference.hpp"
 #include "jingle-handler/jingle.hpp"
 #include "util/event.hpp"
@@ -64,10 +65,6 @@ struct Args {
         return args;
     }
 };
-
-namespace colibri {
-auto setup_colibri(const jingle::Jingle& initiate_jingle, const bool secure) -> bool;
-}
 
 auto main(const int argc, const char* const argv[]) -> int {
     if(argc < 3) {
@@ -140,8 +137,9 @@ auto main(const int argc, const char* const argv[]) -> int {
                 DYN_ASSERT(success, "failed to send accept iq");
             });
         }
-        // TODO: initiate colibri
-        colibri::setup_colibri(jingle_handler.get_session().initiate_jingle, false);
+
+        auto colibri = colibri::Colibri::connect(jingle_handler.get_session().initiate_jingle, args.secure);
+        colibri->set_last_n(5);
 
         while(true) {
             const auto iq = xmpp::elm::iq.clone()
