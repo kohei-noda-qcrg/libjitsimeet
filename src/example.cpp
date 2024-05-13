@@ -73,7 +73,7 @@ auto main(const int argc, const char* const argv[]) -> int {
     }
     const auto args    = Args::parse(argc, argv);
     const auto ws_path = std::string("xmpp-websocket?room=") + args.room;
-    const auto ws_conn = ws::create_connection(args.host, ws_path.data(), args.secure);
+    const auto ws_conn = ws::create_connection(args.host, 443, ws_path.data(), args.secure);
 
     auto event  = Event();
     auto jid    = xmpp::Jid();

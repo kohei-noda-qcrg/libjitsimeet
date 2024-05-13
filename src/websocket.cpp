@@ -110,7 +110,7 @@ auto connection_worker_main(Connection* const conn) -> void {
 
 } // namespace
 
-auto create_connection(const char* const address, const char* const path, const bool secure) -> Connection* {
+auto create_connection(const char* const address, const uint32_t port, const char* const path, const bool secure) -> Connection* {
     lws_set_log_level(config::libws_loglevel_bitmap, NULL);
 
     auto conn = std::make_unique<Connection>(Connection({
@@ -140,14 +140,13 @@ auto create_connection(const char* const address, const char* const path, const 
     const auto context = lws_create_context(&context_creatin_info);
     DYN_ASSERT(context != NULL);
 
-    const auto port      = 443;
     const auto host      = build_string(address, ":", port);
     const auto ssl_flags = secure ? LCCSCF_USE_SSL : LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
 
     const auto client_connect_info = lws_client_connect_info{
         .context                   = context,
         .address                   = address,
-        .port                      = port,
+        .port                      = int(port),
         .ssl_connection            = ssl_flags,
         .path                      = path,
         .host                      = host.data(),
