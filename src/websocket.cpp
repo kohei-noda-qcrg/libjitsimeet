@@ -49,6 +49,10 @@ auto xmpp_callback(lws* wsi, lws_callback_reasons reason, void* const /*user*/, 
     }
 
     const auto conn = std::bit_cast<Connection*>(proto->user);
+    if(conn->conn_state == ConnectionState::Destroyed) {
+        return -1;
+    }
+
     switch(reason) {
     case LWS_CALLBACK_CLIENT_ESTABLISHED:
         if(config::debug_websocket) {
@@ -108,7 +112,6 @@ auto xmpp_callback(lws* wsi, lws_callback_reasons reason, void* const /*user*/, 
 
 auto connection_worker_main(Connection* const conn) -> void {
     while(conn->conn_state != ConnectionState::Destroyed) {
-        PRINT("_WS_");
         lws_service(conn->context, 0);
     }
     lws_context_destroy(conn->context);
@@ -173,6 +176,8 @@ auto create_connection(const char* const address, const uint32_t port, const cha
 }
 
 auto free_connection(Connection* const conn) -> void {
+    conn->conn_state = ConnectionState::Destroyed;
+    lws_callback_on_writable(conn->wsi);
     conn->worker.join();
     delete conn;
 }
