@@ -65,6 +65,10 @@ struct Args {
     }
 };
 
+namespace colibri {
+auto setup_colibri(const jingle::Jingle& initiate_jingle, const bool secure) -> bool;
+}
+
 auto main(const int argc, const char* const argv[]) -> int {
     if(argc < 3) {
         print("usage: example [-s] HOST ROOM");
@@ -137,6 +141,7 @@ auto main(const int argc, const char* const argv[]) -> int {
             });
         }
         // TODO: initiate colibri
+        colibri::setup_colibri(jingle_handler.get_session().initiate_jingle, false);
 
         while(true) {
             const auto iq = xmpp::elm::iq.clone()
