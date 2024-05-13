@@ -10,6 +10,6 @@ struct Colibri {
 
     ~Colibri();
 
-    static auto connect(const jingle::Jingle& initiate_jingle, bool secure) -> std::optional<Colibri>;
+    static auto connect(const jingle::Jingle& initiate_jingle, bool secure) -> std::unique_ptr<Colibri>;
 };
 } // namespace colibri

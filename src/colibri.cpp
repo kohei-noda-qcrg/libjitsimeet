@@ -24,13 +24,13 @@ Colibri::~Colibri() {
     ws::free_connection(ws_conn);
 }
 
-auto Colibri::connect(const jingle::Jingle& initiate_jingle, const bool secure) -> std::optional<Colibri> {
-    unwrap_po(transport, find_transport(initiate_jingle));
-    unwrap_oo(ws_uri, URI::parse(transport.websocket));
+auto Colibri::connect(const jingle::Jingle& initiate_jingle, const bool secure) -> std::unique_ptr<Colibri> {
+    unwrap_pp(transport, find_transport(initiate_jingle));
+    unwrap_op(ws_uri, URI::parse(transport.websocket));
     if(config::debug_colibri) {
         PRINT("connecting to colibri at ", transport.websocket);
     }
-    unwrap_po_mut(conn, ws::create_connection(std::string(ws_uri.domain).data(), ws_uri.port, std::string(ws_uri.path).data(), secure));
-    return Colibri{.ws_conn = &conn};
+    unwrap_pp_mut(conn, ws::create_connection(std::string(ws_uri.domain).data(), ws_uri.port, std::string(ws_uri.path).data(), secure));
+    return std::unique_ptr<Colibri>(new Colibri{.ws_conn = &conn});
 }
 } // namespace colibri
