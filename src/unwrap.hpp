@@ -34,6 +34,6 @@
 #define unwrap_pb(var, opt, ...)     unwrap_pv(var, opt, const, false, __VA_ARGS__)
 #define unwrap_pb_mut(var, opt, ...) unwrap_pv(var, opt, , false, __VA_ARGS__)
 #define unwrap_po(var, opt, ...)     unwrap_pv(var, opt, const, std::nullopt, __VA_ARGS__)
-#define unwrap_po_mut(var, opt, ...) unwrap_pv(var, opt, , falsist, __VA_ARGS__)
+#define unwrap_po_mut(var, opt, ...) unwrap_pv(var, opt, , std::nullopt, __VA_ARGS__)
 #define unwrap_pn(var, opt, ...)     unwrap_pv(var, opt, const, , __VA_ARGS__)
 #define unwrap_pn_mut(var, opt, ...) unwrap_pv(var, opt, , , __VA_ARGS__)
