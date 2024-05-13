@@ -33,6 +33,7 @@ auto setup_colibri(const jingle::Jingle& initiate_jingle, const bool secure) -> 
     }
     unwrap_pb_mut(conn, ws::create_connection(std::string(ws_uri.domain).data(), ws_uri.port, std::string(ws_uri.path).data(), secure));
     ws::send_str(&conn, R"({"colibriClass":"ReceiverVideoConstraints","lastN":1})");
+    ws::free_connection(&conn);
     return true;
 }
 } // namespace colibri
