@@ -1,4 +1,5 @@
 #include "conference.hpp"
+#include "array-util.hpp"
 #include "assert.hpp"
 #include "base64.hpp"
 #include "caps.hpp"

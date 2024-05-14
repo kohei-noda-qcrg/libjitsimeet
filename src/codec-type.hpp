@@ -1,5 +1,4 @@
 #pragma once
-#include "array-util.hpp"
 
 enum class CodecType {
     Opus,

@@ -1,5 +1,6 @@
 #include <iomanip>
 
+#include "../array-util.hpp"
 #include "../assert.hpp"
 #include "../config.hpp"
 #include "../jingle/jingle.hpp"
@@ -201,12 +202,11 @@ auto JingleHandler::build_accept_jingle() const -> std::optional<jingle::Jingle>
         if(!is_audio) {
             rtp_desc.sources.push_back(jingle::Jingle::Content::RTPDescription::Source{.ssrc = session.video_rtx_ssrc});
         }
-        static auto stream_id_serial = std::atomic_int(0);
-        const auto  stream_id        = stream_id_serial.fetch_add(1);
-        const auto  label            = build_string("stream_label_", stream_id);
-        const auto  mslabel          = build_string("multi_stream_label_", stream_id);
-        const auto  msid             = mslabel + " " + label;
-        const auto  cname            = build_string("cname_", stream_id);
+        const auto stream_id = rng::generate_random_uint32();
+        const auto label     = build_string("stream_label_", stream_id);
+        const auto mslabel   = build_string("multi_stream_label_", stream_id);
+        const auto msid      = mslabel + " " + label;
+        const auto cname     = build_string("cname_", stream_id);
         for(auto& src : rtp_desc.sources) {
             src.parameters.push_back({"cname", cname});
             src.parameters.push_back({"msid", msid});
