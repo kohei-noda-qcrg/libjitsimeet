@@ -18,6 +18,7 @@ enum class ConnectionState {
 struct Connection {
     lws_context*                context;
     lws*                        wsi;
+    std::vector<std::byte>      receive_buffer;
     std::vector<Receiver>       receivers;
     ConnectionState             conn_state;
     std::thread                 worker;
@@ -36,6 +37,27 @@ auto write_back_str(lws* const wsi, const std::string_view str) -> int {
     return write_back(wsi, str.data(), str.size());
 }
 
+auto invoke_receiver(Connection* const conn, const std::span<std::byte> payload) -> void {
+    auto& rxs = conn->receivers;
+    for(auto i = rxs.begin(); i < rxs.end(); i += 1) {
+        switch((*i)(payload)) {
+        case ReceiverResult::Ignored:
+            break;
+        case ReceiverResult::Complete:
+            rxs.erase(i);
+            [[fallthrough]];
+        case ReceiverResult::Handled:
+            i = rxs.end();
+            break;
+        }
+    }
+}
+
+auto append(std::vector<std::byte>& vec, void* in, const size_t len) -> void {
+    const auto ptr = std::bit_cast<std::byte*>(in);
+    vec.insert(vec.end(), ptr, ptr + len);
+}
+
 auto xmpp_callback(lws* wsi, lws_callback_reasons reason, void* const /*user*/, void* const in, const size_t len) -> int {
     const auto proto = lws_get_protocol(wsi);
     if(config::debug_websocket) {
@@ -44,10 +66,6 @@ auto xmpp_callback(lws* wsi, lws_callback_reasons reason, void* const /*user*/, 
     if(proto == NULL) {
         return 0;
     }
-    if(len >= proto->rx_buffer_size) {
-        WARN("rx packet size limit exceeded");
-    }
-
     const auto conn = std::bit_cast<Connection*>(proto->user);
     if(conn->conn_state == ConnectionState::Destroyed) {
         return -1;
@@ -67,6 +85,7 @@ auto xmpp_callback(lws* wsi, lws_callback_reasons reason, void* const /*user*/, 
         conn->conn_state = ConnectionState::Destroyed;
         break;
     case LWS_CALLBACK_CLOSED:
+    case LWS_CALLBACK_CLIENT_CLOSED:
         if(config::debug_websocket) {
             PRINT(__func__, " connection close");
         }
@@ -77,20 +96,21 @@ auto xmpp_callback(lws* wsi, lws_callback_reasons reason, void* const /*user*/, 
             auto str = std::string_view(std::bit_cast<char*>(in));
             PRINT(">>> ", str);
         }
-        auto&      rxs  = conn->receivers;
-        const auto data = std::span<std::byte>(std::bit_cast<std::byte*>(in), len);
-        for(auto i = rxs.begin(); i < rxs.end(); i += 1) {
-            switch((*i)(data)) {
-            case ReceiverResult::Ignored:
-                break;
-            case ReceiverResult::Complete:
-                i = rxs.erase(i);
-                [[fallthrough]];
-            case ReceiverResult::Handled:
-                i = rxs.end();
-                break;
-            }
+        const auto remaining = lws_remaining_packet_payload(wsi);
+        const auto final     = lws_is_final_fragment(wsi);
+        if(remaining != 0 || !final) {
+            append(conn->receive_buffer, in, len);
+            break;
         }
+        auto complete_payload = std::span<std::byte>();
+        if(conn->receive_buffer.empty()) {
+            complete_payload = std::span<std::byte>(std::bit_cast<std::byte*>(in), len);
+        } else {
+            append(conn->receive_buffer, in, len);
+            complete_payload = conn->receive_buffer;
+        }
+        invoke_receiver(conn, complete_payload);
+        conn->receive_buffer.clear();
     } break;
     case LWS_CALLBACK_CLIENT_WRITEABLE:
         if(config::debug_websocket) {
