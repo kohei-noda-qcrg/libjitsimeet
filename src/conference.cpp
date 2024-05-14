@@ -16,7 +16,7 @@ auto to_span(const std::string_view str) -> std::span<std::byte> {
     return std::span<std::byte>(std::bit_cast<std::byte*>(str.data()), str.size());
 }
 
-constexpr auto disco_node = "https://misskey.io/@mojyack";
+constexpr auto disco_node = "https://github.com/mojyack/libjitsimeet";
 const auto     disco_info = xmpp::elm::query.clone()
                             .append_children({
                                 xmpp::elm::identity.clone()
