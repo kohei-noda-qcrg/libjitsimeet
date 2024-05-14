@@ -1,6 +1,7 @@
 #pragma once
 #include <functional>
 
+#include "codec-type.hpp"
 #include "jingle/jingle.hpp"
 #include "util/coroutine.hpp"
 #include "util/string-map.hpp"
@@ -37,15 +38,24 @@ struct SentIq {
     std::function<void(bool)> on_result; // optional
 };
 
+struct Config {
+    xmpp::Jid   jid;
+    std::string room;
+    CodecType   video_codec_type;
+    bool        audio_muted;
+    bool        video_muted;
+
+    auto get_focus_jid() const -> xmpp::Jid;
+    auto get_muc_jid() const -> xmpp::Jid;
+    auto get_muc_local_jid() const -> xmpp::Jid;
+    auto get_muc_local_focus_jid() const -> xmpp::Jid;
+};
+
 struct Conference {
     using Worker = CoRoutine<bool>;
 
     // constant
-    xmpp::Jid            jid;                 // self jid in the server
-    xmpp::Jid            focus_jid;           // focus jid in the server
-    xmpp::Jid            muc_jid;             // room jid
-    xmpp::Jid            muc_local_jid;       // self jid in the room
-    xmpp::Jid            muc_local_focus_jid; // focus jid in the room
+    Config               config;
     std::string          disco_sha1_base64;
     std::string          disco_sha256_base64;
     ConferenceCallbacks* callbacks;
@@ -64,7 +74,7 @@ struct Conference {
     auto feed_payload(std::string_view payload) -> bool;
     auto send_iq(xml::Node iq, std::function<void(bool)> on_result) -> void;
 
-    static auto create(std::string_view room, const xmpp::Jid& jid, ConferenceCallbacks* callbacks) -> std::unique_ptr<Conference>;
+    static auto create(Config config, ConferenceCallbacks* callbacks) -> std::unique_ptr<Conference>;
 
     ~Conference(){};
 };

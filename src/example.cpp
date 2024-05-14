@@ -113,7 +113,15 @@ auto main(const int argc, const char* const argv[]) -> int {
         auto callbacks           = ConferenceCallbacks();
         callbacks.ws_conn        = ws_conn;
         callbacks.jingle_handler = &jingle_handler;
-        const auto conference    = conference::Conference::create(args.room, jid, &callbacks);
+        const auto conference    = conference::Conference::create(
+            conference::Config{
+                   .jid              = jid,
+                   .room             = args.room,
+                   .video_codec_type = CodecType::H264,
+                   .audio_muted      = false,
+                   .video_muted      = false,
+            },
+            &callbacks);
         ws::add_receiver(ws_conn, [&conference](const std::span<std::byte> data) -> ws::ReceiverResult {
             // feed_payload always returns true in current implementation
             conference->feed_payload(std::string_view((char*)data.data(), data.size()));
@@ -126,7 +134,7 @@ auto main(const int argc, const char* const argv[]) -> int {
             auto accept_iq = xmpp::elm::iq.clone()
                                  .append_attrs({
                                      {"from", jid.as_full()},
-                                     {"to", conference->muc_local_focus_jid.as_full()},
+                                     {"to", conference->config.get_muc_local_focus_jid().as_full()},
                                      {"type", "set"},
                                  })
                                  .append_children({

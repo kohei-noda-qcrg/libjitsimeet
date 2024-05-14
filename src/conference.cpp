@@ -64,13 +64,22 @@ const auto     disco_info = xmpp::elm::query.clone()
                                     }),
                             });
 
+auto jid_node_to_muc_resource(const std::string_view node) -> std::string {
+    for(const auto elm : split(node, "-")) {
+        if(!elm.empty()) {
+            return std::string(elm);
+        }
+    }
+    return std::string(node);
+}
+
 auto handle_iq_get(Conference* const conf, const xml::Node& iq) -> bool {
     unwrap_ob(from, iq.find_attr("from"));
     unwrap_ob(id, iq.find_attr("id"));
     unwrap_pb(query, iq.find_first_child("query"));
     auto iqr = xmpp::elm::iq.clone()
                    .append_attrs({
-                       {"from", conf->jid.as_full()},
+                       {"from", conf->config.jid.as_full()},
                        {"to", std::string(from)},
                        {"id", std::string(id)},
                        {"type", "result"},
@@ -130,7 +139,7 @@ auto handle_iq_set(Conference* const conf, const xml::Node& iq) -> bool {
 ack:
     const auto iqr = xmpp::elm::iq.clone()
                          .append_attrs({
-                             {"from", conf->jid.as_full()},
+                             {"from", conf->config.jid.as_full()},
                              {"to", std::string(from)},
                              {"id", std::string(id)},
                              {"type", "result"},
@@ -226,7 +235,7 @@ auto handle_received(Conference* const conf) -> Conference::Worker::Generator {
         const auto muid = build_string("muid_", rng::generate_random_uint32());
         const auto iq   = xmpp::elm::iq.clone()
                             .append_attrs({
-                                {"to", conf->focus_jid.as_full()},
+                                {"to", conf->config.get_focus_jid().as_full()},
                                 {"id", id},
                                 {"type", "set"},
                             })
@@ -234,7 +243,7 @@ auto handle_received(Conference* const conf) -> Conference::Worker::Generator {
                                 xmpp::elm::conference.clone()
                                     .append_attrs({
                                         {"machine-uid", muid},
-                                        {"room", conf->muc_jid.as_bare()},
+                                        {"room", conf->config.get_muc_jid().as_bare()},
                                     })
                                     .append_children({
                                         xmpp::elm::property.clone()
@@ -264,7 +273,7 @@ auto handle_received(Conference* const conf) -> Conference::Worker::Generator {
         const auto presence =
             xmpp::elm::presence.clone()
                 .append_attrs({
-                    {"to", conf->muc_local_jid.as_full()},
+                    {"to", conf->config.get_muc_local_jid().as_full()},
                 })
                 .append_children({
                     xmpp::elm::muc,
@@ -329,16 +338,35 @@ loop:
     co_yield yield;
     goto loop;
 }
-
-auto jid_node_to_muc_resource(const std::string_view node) -> std::string {
-    for(const auto elm : split(node, "-")) {
-        if(!elm.empty()) {
-            return std::string(elm);
-        }
-    }
-    return std::string(node);
-}
 } // namespace
+
+auto Config::get_focus_jid() const -> xmpp::Jid {
+    return xmpp::Jid{
+        .node     = "focus",
+        .domain   = std::string("auth.") + jid.domain,
+        .resource = "focus",
+    };
+}
+
+auto Config::get_muc_jid() const -> xmpp::Jid {
+    return xmpp::Jid{
+        .node     = room,
+        .domain   = build_string("conference.") + jid.domain,
+        .resource = "",
+    };
+}
+
+auto Config::get_muc_local_jid() const -> xmpp::Jid {
+    auto muc_jid     = get_muc_jid();
+    muc_jid.resource = jid_node_to_muc_resource(jid.node);
+    return muc_jid;
+}
+
+auto Config::get_muc_local_focus_jid() const -> xmpp::Jid {
+    auto muc_jid     = get_muc_jid();
+    muc_jid.resource = "focus";
+    return muc_jid;
+}
 
 auto Conference::generate_iq_id() -> std::string {
     return build_string("iq_", (iq_serial += 1));
@@ -365,33 +393,9 @@ auto Conference::send_iq(xml::Node node, std::function<void(bool)> on_result) ->
     callbacks->send_payload(xml::deparse(node));
 }
 
-auto Conference::create(const std::string_view     room,
-                        const xmpp::Jid&           jid,
-                        ConferenceCallbacks* const callbacks) -> std::unique_ptr<Conference> {
-    const auto muc_domain = std::string("conference.") + jid.domain;
-
+auto Conference::create(Config config, ConferenceCallbacks* const callbacks) -> std::unique_ptr<Conference> {
     auto conf = new Conference{
-        .jid       = jid,
-        .focus_jid = xmpp::Jid{
-            .node     = "focus",
-            .domain   = std::string("auth.") + jid.domain,
-            .resource = "focus",
-        },
-        .muc_jid = xmpp::Jid{
-            .node     = std::string(room),
-            .domain   = muc_domain,
-            .resource = "",
-        },
-        .muc_local_jid = xmpp::Jid{
-            .node     = std::string(room),
-            .domain   = muc_domain,
-            .resource = jid_node_to_muc_resource(jid.node),
-        },
-        .muc_local_focus_jid = xmpp::Jid{
-            .node     = std::string(room),
-            .domain   = muc_domain,
-            .resource = "focus",
-        },
+        .config    = std::move(config),
         .callbacks = callbacks,
     };
 
@@ -400,6 +404,7 @@ auto Conference::create(const std::string_view     room,
     const auto disco_sha256   = sha::calc_sha256(to_span(disco_str));
     conf->disco_sha1_base64   = base64::encode(disco_sha1);
     conf->disco_sha256_base64 = base64::encode(disco_sha256);
+
     return std::unique_ptr<Conference>(conf);
 }
 } // namespace conference
