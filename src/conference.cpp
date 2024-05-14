@@ -222,7 +222,7 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
 auto handle_received(Conference* const conf) -> Conference::Worker::Generator {
     // disco
     {
-        const auto id = conf->generate_iq_id();
+        const auto id   = conf->generate_iq_id();
         const auto muid = build_string("muid_", rng::generate_random_uint32());
         const auto iq   = xmpp::elm::iq.clone()
                             .append_attrs({
