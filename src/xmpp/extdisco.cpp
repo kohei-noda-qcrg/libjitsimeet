@@ -62,7 +62,6 @@ auto parse_service(const xml::Node& node) -> std::optional<Service> {
 }
 } // namespace
 auto parse_services(const xml::Node& services) -> std::optional<std::vector<Service>> {
-    // TODO: check xmlns
     auto r = std::vector<Service>();
     for(const auto& service : services.children) {
         if(service.name != "service") {

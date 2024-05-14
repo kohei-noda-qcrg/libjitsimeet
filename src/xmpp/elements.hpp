@@ -2,12 +2,13 @@
 #include "../xml/xml.hpp"
 
 namespace xmpp::ns {
-constexpr auto disco_info  = "http://jabber.org/protocol/disco#info";
-constexpr auto caps        = "http://jabber.org/protocol/caps";
-constexpr auto nick        = "http://jabber.org/protocol/nick";
-constexpr auto muc         = "http://jabber.org/protocol/muc";
-constexpr auto muc_user    = "http://jabber.org/protocol/muc#user";
-constexpr auto jitsi_focus = "http://jitsi.org/protocol/focus";
+constexpr auto xmpp_extdisco = "urn:xmpp:extdisco:2";
+constexpr auto disco_info    = "http://jabber.org/protocol/disco#info";
+constexpr auto caps          = "http://jabber.org/protocol/caps";
+constexpr auto nick          = "http://jabber.org/protocol/nick";
+constexpr auto muc           = "http://jabber.org/protocol/muc";
+constexpr auto muc_user      = "http://jabber.org/protocol/muc#user";
+constexpr auto jitsi_focus   = "http://jitsi.org/protocol/focus";
 } // namespace xmpp::ns
 
 namespace xmpp::elm {
@@ -67,7 +68,7 @@ inline const auto query = xml::Node{
 inline const auto services = xml::Node{
     .name  = "services",
     .attrs = {
-        {"xmlns", "urn:xmpp:extdisco:2"},
+        {"xmlns", ns::xmpp_extdisco},
     },
 };
 inline const auto presence = xml::Node{

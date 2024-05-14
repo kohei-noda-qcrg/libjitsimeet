@@ -147,6 +147,7 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
             DYN_ASSERT(response.is_attr_equal("type", "result"), "unexpected iq");
             const auto services = response.find_first_child("services");
             DYN_ASSERT(services != nullptr);
+            DYN_ASSERT(services->is_attr_equal("xmlns", xmpp::ns::xmpp_extdisco));
             if(auto sv_o = parse_services(*services); sv_o) {
                 self.external_services = std::move(*sv_o);
             }
