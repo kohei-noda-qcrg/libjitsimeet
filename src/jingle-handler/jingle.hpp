@@ -2,25 +2,11 @@
 #include <span>
 #include <unordered_map>
 
-#include "../array-util.hpp"
+#include "../codec-type.hpp"
 #include "../util/event.hpp"
 #include "../xmpp/extdisco.hpp"
 #include "../xmpp/jid.hpp"
 #include "ice.hpp"
-
-enum class CodecType {
-    Opus,
-    H264,
-    Vp8,
-    Vp9,
-};
-
-inline const auto codec_type_str = make_str_table<CodecType>({
-    {CodecType::Opus, "opus"},
-    {CodecType::H264, "H264"},
-    {CodecType::Vp8, "VP8"},
-    {CodecType::Vp9, "VP9"},
-});
 
 struct Codec {
     using RTCPFeedBack = jingle::Jingle::Content::RTPDescription::PayloadType::RTCPFeedBack;
