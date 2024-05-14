@@ -8,10 +8,3 @@ enum class CodecType {
     Vp9,
 };
 
-inline const auto codec_type_str = make_str_table<CodecType>({
-    {CodecType::Opus, "opus"},
-    {CodecType::H264, "H264"},
-    {CodecType::Vp8, "VP8"},
-    {CodecType::Vp9, "VP9"},
-});
-

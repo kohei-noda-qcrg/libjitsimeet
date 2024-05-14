@@ -24,6 +24,13 @@ const auto source_type_str = make_str_table<SourceType>({
     {SourceType::Video, "video"},
 });
 
+const auto codec_type_str = make_str_table<CodecType>({
+    {CodecType::Opus, "opus"},
+    {CodecType::H264, "H264"},
+    {CodecType::Vp8, "VP8"},
+    {CodecType::Vp9, "VP9"},
+});
+
 struct DescriptionParseResult {
     std::vector<Codec> codecs;
 
