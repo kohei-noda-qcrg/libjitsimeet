@@ -64,6 +64,13 @@ const auto     disco_info = xmpp::elm::query.clone()
                                     }),
                             });
 
+const auto codec_type_str = make_str_table<CodecType>({
+    // {CodecType::Opus, "opus"},
+    {CodecType::H264, "h264"},
+    {CodecType::Vp8, "vp8"},
+    {CodecType::Vp9, "vp9"},
+});
+
 auto jid_node_to_muc_resource(const std::string_view node) -> std::string {
     for(const auto elm : split(node, "-")) {
         if(!elm.empty()) {
@@ -269,7 +276,8 @@ auto handle_received(Conference* const conf) -> Conference::Worker::Generator {
     }
     // presence
     {
-        // DEBUG
+        const auto codec_type = codec_type_str.find(conf->config.video_codec_type);
+        DYN_ASSERT(codec_type != nullptr, "invalid codec type config");
         const auto presence =
             xmpp::elm::presence.clone()
                 .append_attrs({
@@ -297,20 +305,18 @@ auto handle_received(Conference* const conf) -> Conference::Worker::Generator {
                     },
                     xml::Node{
                         .name = "jitsi_participant_codecType",
-                        // DEBUG
-                        .data = "h264",
+                        .data = codec_type->second,
                     },
                     xml::Node{
                         .name = "videomuted",
-                        .data = "false",
+                        .data = conf->config.video_muted ? "true" : "false",
                     },
                     xml::Node{
                         .name = "audiomuted",
-                        .data = "false",
+                        .data = conf->config.audio_muted ? "true" : "false",
                     },
                     xmpp::elm::nick.clone()
-                        // DEBUG
-                        .set_data("mojyack"),
+                        .set_data(conf->config.nick),
                 });
 
         conf->callbacks->send_payload(xml::deparse(presence));

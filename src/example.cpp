@@ -117,7 +117,8 @@ auto main(const int argc, const char* const argv[]) -> int {
             conference::Config{
                    .jid              = jid,
                    .room             = args.room,
-                   .video_codec_type = CodecType::H264,
+                   .nick             = "libjitsimeet-example",
+                   .video_codec_type = video_codec_type,
                    .audio_muted      = false,
                    .video_muted      = false,
             },

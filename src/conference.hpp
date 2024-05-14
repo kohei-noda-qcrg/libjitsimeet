@@ -41,6 +41,7 @@ struct SentIq {
 struct Config {
     xmpp::Jid   jid;
     std::string room;
+    std::string nick;
     CodecType   video_codec_type;
     bool        audio_muted;
     bool        video_muted;
