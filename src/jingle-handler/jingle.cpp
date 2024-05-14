@@ -3,6 +3,7 @@
 #include "../assert.hpp"
 #include "../config.hpp"
 #include "../jingle/jingle.hpp"
+#include "../random.hpp"
 #include "../sha.hpp"
 #include "../unwrap.hpp"
 #include "../util/charconv.hpp"
@@ -310,16 +311,15 @@ auto JingleHandler::on_initiate(jingle::Jingle jingle) -> bool {
     auto       fingerprint_str = digest_str(fingerprint);
     auto       cert_pem        = pem::encode("CERTIFICATE", *cert_der);
     auto       priv_key_pem    = pem::encode("PRIVATE KEY", *priv_key_der);
-
     if(config::debug_jingle_handler) {
         PRINT(fingerprint_str.data());
         PRINT(cert_pem.data());
         PRINT(priv_key_pem.data());
     }
-    // TODO: generate random ssrcs
-    const auto audio_ssrc     = uint32_t(3111629862);
-    const auto video_ssrc     = uint32_t(2087854985);
-    const auto video_rtx_ssrc = uint32_t(438931176);
+
+    const auto audio_ssrc     = rng::generate_random_uint32();
+    const auto video_ssrc     = rng::generate_random_uint32();
+    const auto video_rtx_ssrc = rng::generate_random_uint32();
 
     unwrap_ob_mut(ice_agent, ice::setup(external_services, transport));
     unwrap_ob_mut(local_cred, ice::get_local_credentials(ice_agent));
