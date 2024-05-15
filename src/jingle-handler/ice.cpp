@@ -117,48 +117,66 @@ end:
 }
 } // namespace
 
+auto MainloopWithRunner::create() -> MainloopWithRunner* {
+    const auto mainloop = g_main_loop_new(NULL, FALSE);
+    assert_p(mainloop != NULL, "failed to create mainloop");
+
+    auto ret = new MainloopWithRunner();
+    ret->mainloop.reset(mainloop);
+    return ret;
+}
+
+auto MainloopWithRunner::start_runner() -> void {
+    runner = std::thread(g_main_loop_run, mainloop.get());
+}
+
+MainloopWithRunner::~MainloopWithRunner() {
+    if(runner.joinable()) {
+        g_main_loop_quit(mainloop.get());
+        runner.join();
+    }
+}
+
 auto setup(const std::span<const xmpp::Service>                  external_services,
            const jingle::Jingle::Content::IceUdpTransport* const transport) -> std::optional<Agent> {
-    const auto mainloop = g_main_loop_new(NULL, FALSE);
-    assert_o(mainloop != NULL, "failed to create mainloop for libnice");
-    auto mainloop_a = AutoGMainLoop(mainloop);
+    auto mainloop = AutoMainloop(MainloopWithRunner::create());
+    assert_o(mainloop.get() != nullptr);
+    const auto mainloop_ctx = g_main_loop_get_context(mainloop->mainloop.get());
 
-    const auto mainloop_ctx = g_main_loop_get_context(mainloop);
-    const auto agent        = nice_agent_new(mainloop_ctx, NICE_COMPATIBILITY_RFC5245);
-    assert_o(agent != NULL, "failed to create nice agent");
-    auto agent_a = AutoNiceAgent(agent);
-
-    g_object_set(agent,
+    auto agent = AutoNiceAgent(nice_agent_new(mainloop_ctx, NICE_COMPATIBILITY_RFC5245));
+    assert_o(agent.get() != NULL, "failed to create nice agent");
+    g_object_set(agent.get(),
                  "ice-tcp", FALSE,
                  "upnp", FALSE,
                  NULL);
 
-    const auto stream_id    = nice_agent_add_stream(agent, 1);
+    const auto stream_id    = nice_agent_add_stream(agent.get(), 1);
     const auto component_id = guint(1);
     assert_o(stream_id > 0, "failed to add stream");
-    assert_o(set_stun_turn(agent, external_services, stream_id, component_id),
+    assert_o(set_stun_turn(agent.get(), external_services, stream_id, component_id),
              "failed to setup stun & turn servers");
-    assert_o(nice_agent_attach_recv(agent, stream_id, component_id, mainloop_ctx, agent_recv_callback, nullptr) == TRUE,
+    assert_o(nice_agent_attach_recv(agent.get(), stream_id, component_id, mainloop_ctx, agent_recv_callback, nullptr) == TRUE,
              "failed to attach recv callback");
     if(transport) {
-        assert_o(nice_agent_set_remote_credentials(agent, stream_id, transport->ufrag.data(), transport->pwd.data()) == TRUE,
+        assert_o(nice_agent_set_remote_credentials(agent.get(), stream_id, transport->ufrag.data(), transport->pwd.data()) == TRUE,
                  "failed to set credentials");
     }
-    assert_o(g_signal_connect(agent, "candidate-gathering-done", G_CALLBACK(candidate_gathering_done), nullptr) > 0,
+    assert_o(g_signal_connect(agent.get(), "candidate-gathering-done", G_CALLBACK(candidate_gathering_done), nullptr) > 0,
              "failed to register candidate-gathering-done callback");
-    assert_o(nice_agent_gather_candidates(agent, stream_id) == TRUE,
+    assert_o(nice_agent_gather_candidates(agent.get(), stream_id) == TRUE,
              "failed to gather candidates");
     if(transport) {
-        assert_o(set_remote_candidates(agent, *transport, stream_id, component_id), "failed to add candidates");
+        assert_o(set_remote_candidates(agent.get(), *transport, stream_id, component_id), "failed to add candidates");
     }
 
     nice_debug_enable(config::debug_ice ? TRUE : FALSE);
+    mainloop->start_runner();
+
     return Agent{
-        .mainloop        = std::move(mainloop_a),
-        .agent           = std::move(agent_a),
-        .mainloop_runner = std::thread(g_main_loop_run, mainloop),
-        .stream_id       = stream_id,
-        .component_id    = component_id,
+        .mainloop     = std::move(mainloop),
+        .agent        = std::move(agent),
+        .stream_id    = stream_id,
+        .component_id = component_id,
     };
 }
 

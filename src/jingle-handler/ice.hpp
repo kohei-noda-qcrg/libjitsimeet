@@ -14,10 +14,22 @@ declare_autoptr(GMainLoop, GMainLoop, g_main_loop_unref);
 declare_autoptr(NiceAgent, NiceAgent, g_object_unref);
 declare_autoptr(GChar, gchar, g_free);
 
-struct Agent {
+struct MainloopWithRunner {
     AutoGMainLoop mainloop;
+    std::thread   runner;
+
+    auto start_runner() -> void;
+
+    static auto create() -> MainloopWithRunner*;
+
+    ~MainloopWithRunner();
+};
+
+using AutoMainloop = std::unique_ptr<MainloopWithRunner>;
+
+struct Agent {
+    AutoMainloop  mainloop;
     AutoNiceAgent agent;
-    std::thread   mainloop_runner;
     guint         stream_id;
     guint         component_id;
 };
