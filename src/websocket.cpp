@@ -4,9 +4,9 @@
 #include <libwebsockets.h>
 
 #include "config.hpp"
-#include "event-buffer.hpp"
 #include "macros/assert.hpp"
 #include "util/assert.hpp"
+#include "util/writers-reader-buffer.hpp"
 #include "websocket.hpp"
 
 namespace ws {
@@ -17,13 +17,13 @@ enum class ConnectionState {
 };
 
 struct Connection {
-    lws_context*                context;
-    lws*                        wsi;
-    std::vector<std::byte>      receive_buffer;
-    std::vector<Receiver>       receivers;
-    ConnectionState             conn_state;
-    std::thread                 worker;
-    CriticalBuffer<std::string> buffer_to_send;
+    lws_context*                     context;
+    lws*                             wsi;
+    std::vector<std::byte>           receive_buffer;
+    std::vector<Receiver>            receivers;
+    ConnectionState                  conn_state;
+    std::thread                      worker;
+    WritersReaderBuffer<std::string> buffer_to_send;
 };
 
 namespace {
