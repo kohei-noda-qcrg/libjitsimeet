@@ -5,8 +5,8 @@
 
 #include <nice/agent.h>
 
-#include "../autoptr.hpp"
 #include "../jingle/jingle.hpp"
+#include "../macros/autoptr.hpp"
 #include "../xmpp/extdisco.hpp"
 
 namespace ice {

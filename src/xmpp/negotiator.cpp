@@ -1,6 +1,7 @@
 #include "negotiator.hpp"
-#include "../assert.hpp"
 #include "../config.hpp"
+#include "../macros/assert.hpp"
+#include "../util/assert.hpp"
 #include "../util/coroutine.hpp"
 #include "../xml/xml.hpp"
 #include "elements.hpp"

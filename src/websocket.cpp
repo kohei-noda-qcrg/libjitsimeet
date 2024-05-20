@@ -3,9 +3,10 @@
 
 #include <libwebsockets.h>
 
-#include "assert.hpp"
 #include "config.hpp"
 #include "event-buffer.hpp"
+#include "macros/assert.hpp"
+#include "util/assert.hpp"
 #include "websocket.hpp"
 
 namespace ws {

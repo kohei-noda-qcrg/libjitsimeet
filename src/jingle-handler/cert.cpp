@@ -4,7 +4,7 @@
 #include <openssl/evp.h>
 #include <openssl/x509.h>
 
-#include "../autoptr.hpp"
+#include "../macros/autoptr.hpp"
 
 namespace cert {
 namespace {

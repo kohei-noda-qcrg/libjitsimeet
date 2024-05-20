@@ -1,7 +1,8 @@
 #include "colibri.hpp"
 #include "config.hpp"
-#include "unwrap.hpp"
+#include "macros/unwrap.hpp"
 #include "uri.hpp"
+#include "util/assert.hpp"
 
 namespace colibri {
 namespace {

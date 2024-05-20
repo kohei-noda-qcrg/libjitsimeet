@@ -1,12 +1,11 @@
 #include <iomanip>
 
 #include "../array-util.hpp"
-#include "../assert.hpp"
 #include "../config.hpp"
 #include "../jingle/jingle.hpp"
+#include "../macros/unwrap.hpp"
 #include "../random.hpp"
 #include "../sha.hpp"
-#include "../unwrap.hpp"
 #include "../util/charconv.hpp"
 #include "../util/error.hpp"
 #include "../util/result.hpp"

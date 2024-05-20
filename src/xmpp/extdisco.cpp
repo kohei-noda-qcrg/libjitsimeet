@@ -1,5 +1,6 @@
 #include "extdisco.hpp"
-#include "../assert.hpp"
+#include "../macros/assert.hpp"
+#include "../util/assert.hpp"
 #include "../util/charconv.hpp"
 #include "../xml/xml.hpp"
 

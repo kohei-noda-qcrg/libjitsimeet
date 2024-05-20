@@ -1,7 +1,8 @@
 #include <arpa/inet.h>
 
 #include "../config.hpp"
-#include "../unwrap.hpp"
+#include "../macros/unwrap.hpp"
+#include "../util/assert.hpp"
 #include "hostaddr.hpp"
 #include "ice.hpp"
 

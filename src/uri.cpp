@@ -1,5 +1,6 @@
 #include "uri.hpp"
-#include "unwrap.hpp"
+#include "macros/unwrap.hpp"
+#include "util/assert.hpp"
 #include "util/charconv.hpp"
 
 namespace {
