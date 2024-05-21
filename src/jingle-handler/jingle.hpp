@@ -29,6 +29,7 @@ enum class SourceType {
 struct Source {
     uint32_t    ssrc;
     SourceType  type;
+    std::string name;
     std::string participant_id;
 };
 
