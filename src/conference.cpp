@@ -9,6 +9,7 @@
 #include "sha.hpp"
 #include "util/misc.hpp"
 #include "xmpp/elements.hpp"
+#include "json/json.hpp"
 
 namespace conference {
 namespace {
@@ -261,7 +262,27 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
         if(payload.name == xmpp::elm::nick.name && payload.is_attr_equal("xmlns", xmpp::ns::nick)) {
             participant->nick = payload.data;
         } else if(payload.name == "SourceInfo") {
-            PRINT("SourceInfo: ", xml_unescape(payload.data));
+            const auto info_r = json::parse(xml_unescape(payload.data));
+            if(!info_r) {
+                WARN("failed to parse SourceInfo: ", info_r.as_error().cstr());
+            }
+            const auto& info = info_r.as_value();
+            for(auto i = info.children.begin(); i != info.children.end(); i = std::next(i)) {
+                const auto& [key, value] = *i;
+                const auto object        = value.get<json::Object>();
+                if(!object) {
+                    continue;
+                }
+                const auto muted = object->children.find("muted");
+                if(muted == object->children.end()) {
+                    continue;
+                }
+                const auto v = muted->second.get<json::Boolean>();
+                if(!v) {
+                    continue;
+                }
+                PRINT("SourceInfo: name=", key, " muted=", v->value);
+            }
         }
     }
 
