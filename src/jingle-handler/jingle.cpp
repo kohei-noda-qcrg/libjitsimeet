@@ -111,6 +111,7 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
         ssrc_map[source.ssrc] = Source{
             .ssrc           = source.ssrc,
             .type           = source_type,
+            .muted          = true,
             .name           = source.name,
             .participant_id = source.owner,
         };
@@ -371,6 +372,7 @@ auto JingleHandler::on_add_source(jingle::Jingle jingle) -> bool {
                 session.ssrc_map.insert(std::make_pair(src.ssrc, Source{
                                                                      .ssrc           = src.ssrc,
                                                                      .type           = type,
+                                                                     .muted          = true,
                                                                      .name           = src.name,
                                                                      .participant_id = src.owner,
                                                                  }));

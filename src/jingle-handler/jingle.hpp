@@ -21,7 +21,7 @@ struct Codec {
 constexpr auto rtp_hdrext_ssrc_audio_level_uri = "urn:ietf:params:rtp-hdrext:ssrc-audio-level";
 constexpr auto rtp_hdrext_transport_cc_uri     = "http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01";
 
-enum class SourceType {
+enum class SourceType : uint8_t {
     Audio,
     Video,
 };
@@ -29,6 +29,7 @@ enum class SourceType {
 struct Source {
     uint32_t    ssrc;
     SourceType  type;
+    bool        muted;
     std::string name;
     std::string participant_id;
 };
