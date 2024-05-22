@@ -30,6 +30,9 @@ struct ConferenceCallbacks {
     virtual auto on_participant_left(const Participant& /*participant*/) -> void {
     }
 
+    virtual auto on_source_mute_info(const std::string_view /*source_name*/, const bool /*muted*/) -> void {
+    }
+
     virtual ~ConferenceCallbacks(){};
 };
 

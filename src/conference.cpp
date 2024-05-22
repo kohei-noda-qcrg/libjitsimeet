@@ -281,7 +281,7 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
                 if(!v) {
                     continue;
                 }
-                PRINT("SourceInfo: name=", key, " muted=", v->value);
+                conf->callbacks->on_source_mute_info(key, v->value);
             }
         }
     }
