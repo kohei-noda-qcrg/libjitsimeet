@@ -394,24 +394,18 @@ auto JingleHandler::on_source_mute_info(std::string_view source_name, bool muted
         if(source.name != source_name) {
             continue;
         }
-        if(source.muted && !muted) {
-            // unmuted
-            target = &source;
-            break;
-        } else if(!source.muted && muted) {
-            // muted
-            target = &source;
-            break;
-        }
+        target = &source;
     }
-    if(target) {
+    assert_p(target, "got source info for unknown source");
+
+    if((target->muted && !muted) || (!target->muted && muted)) {
         if(config::debug_jingle_handler) {
             PRINT("source mute state changed for participant ", target->participant_id);
         }
+        return target;
     } else {
-        WARN("got source info for unknown source");
+        return nullptr;
     }
-    return target;
 }
 
 JingleHandler::JingleHandler(const CodecType                audio_codec_type,
