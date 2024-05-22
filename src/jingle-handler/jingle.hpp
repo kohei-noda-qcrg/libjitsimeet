@@ -70,6 +70,8 @@ class JingleHandler {
     auto build_accept_jingle() const -> std::optional<jingle::Jingle>;
     auto on_initiate(jingle::Jingle jingle) -> bool;
     auto on_add_source(jingle::Jingle jingle) -> bool;
+    // returns valid pointer to source if its mute state was changed
+    auto on_source_mute_info(std::string_view source_name, bool muted) -> const Source*;
 
     JingleHandler(CodecType                      audio_codec_type,
                   CodecType                      video_codec_type,

@@ -382,6 +382,38 @@ auto JingleHandler::on_add_source(jingle::Jingle jingle) -> bool {
     return true;
 }
 
+auto JingleHandler::on_source_mute_info(std::string_view source_name, bool muted) -> const Source* {
+    if(config::debug_jingle_handler) {
+        PRINT("got source info: name=", source_name, " muted=", muted);
+    }
+    auto& ssrc_map = session.ssrc_map;
+    // is there a better way to iterate over map?
+    auto target = (Source*)(nullptr);
+    for(auto i = ssrc_map.begin(); i != ssrc_map.end(); i = std::next(i)) {
+        auto& source = i->second;
+        if(source.name != source_name) {
+            continue;
+        }
+        if(source.muted && !muted) {
+            // unmuted
+            target = &source;
+            break;
+        } else if(!source.muted && muted) {
+            // muted
+            target = &source;
+            break;
+        }
+    }
+    if(target) {
+        if(config::debug_jingle_handler) {
+            PRINT("source mute state changed for participant ", target->participant_id);
+        }
+    } else {
+        WARN("got source info for unknown source");
+    }
+    return target;
+}
+
 JingleHandler::JingleHandler(const CodecType                audio_codec_type,
                              const CodecType                video_codec_type,
                              xmpp::Jid                      jid,
