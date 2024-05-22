@@ -30,11 +30,11 @@ loop:
 }
 
 const auto xml_escape_table = std::array{
-    std::pair("&", "&amp"),
-    std::pair("<", "&lt"),
-    std::pair(">", "&gt"),
-    std::pair("\"", "&quot"),
-    std::pair("'", "&apos"),
+    std::pair("&", "&amp;"),
+    std::pair("<", "&lt;"),
+    std::pair(">", "&gt;"),
+    std::pair("\"", "&quot;"),
+    std::pair("'", "&apos;"),
 };
 
 auto xml_escape(std::string str) -> std::string {
