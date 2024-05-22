@@ -16,6 +16,41 @@ auto to_span(const std::string_view str) -> std::span<std::byte> {
     return std::span<std::byte>(std::bit_cast<std::byte*>(str.data()), str.size());
 }
 
+auto replace(std::string str, const std::string_view from, const std::string_view to) -> std::string {
+    auto pos = size_t(0);
+
+loop:
+    pos = str.find(from, pos);
+    if(pos == std::string::npos) {
+        return str;
+    }
+    str.replace(pos, from.size(), to);
+    pos += to.size();
+    goto loop;
+}
+
+const auto xml_escape_table = std::array{
+    std::pair("&", "&amp"),
+    std::pair("<", "&lt"),
+    std::pair(">", "&gt"),
+    std::pair("\"", "&quot"),
+    std::pair("'", "&apos"),
+};
+
+auto xml_escape(std::string str) -> std::string {
+    for(auto i = xml_escape_table.begin(); i < xml_escape_table.end(); i += 1) {
+        str = replace(str, i->first, i->second);
+    }
+    return str;
+}
+
+auto xml_unescape(std::string str) -> std::string {
+    for(auto i = xml_escape_table.rbegin(); i < xml_escape_table.rend(); i += 1) {
+        str = replace(str, i->second, i->first);
+    }
+    return str;
+}
+
 constexpr auto disco_node = "https://github.com/mojyack/libjitsimeet";
 const auto     disco_info = xmpp::elm::query.clone()
                             .append_children({
@@ -225,6 +260,8 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
     for(const auto& payload : presence.children) {
         if(payload.name == xmpp::elm::nick.name && payload.is_attr_equal("xmlns", xmpp::ns::nick)) {
             participant->nick = payload.data;
+        } else if(payload.name == "SourceInfo") {
+            PRINT("SourceInfo: ", xml_unescape(payload.data));
         }
     }
 
