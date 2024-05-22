@@ -1,4 +1,5 @@
 subdir('xml')
+subdir('json')
 
 libjitsimeet_deps = [
   dependency('libwebsockets'),
@@ -25,4 +26,4 @@ libjitsimeet_src = files(
   'jingle-handler/pem.cpp',
   'jingle-handler/hostaddr.cpp',
   'jingle-handler/ice.cpp',
-) + tinyxml_src
+) + tinyxml_src + tinyjson_src
