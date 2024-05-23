@@ -392,6 +392,8 @@ auto handle_received(Conference* const conf) -> Conference::Worker::Generator {
                         .name = "jitsi_participant_codecType",
                         .data = codec_type->second,
                     },
+                    // note: "SourceInfo" seems to only work in room-to-client presence
+                    // in client-to-room presence, we use "videomuted" and "audiomuted"
                     xml::Node{
                         .name = "videomuted",
                         .data = conf->config.video_muted ? "true" : "false",
