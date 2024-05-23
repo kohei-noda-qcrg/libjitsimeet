@@ -21,7 +21,7 @@ struct Codec {
 constexpr auto rtp_hdrext_ssrc_audio_level_uri = "urn:ietf:params:rtp-hdrext:ssrc-audio-level";
 constexpr auto rtp_hdrext_transport_cc_uri     = "http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01";
 
-enum class SourceType : uint8_t {
+enum class SourceType {
     Audio,
     Video,
 };
@@ -29,8 +29,6 @@ enum class SourceType : uint8_t {
 struct Source {
     uint32_t    ssrc;
     SourceType  type;
-    bool        muted;
-    std::string name;
     std::string participant_id;
 };
 
@@ -70,8 +68,6 @@ class JingleHandler {
     auto build_accept_jingle() const -> std::optional<jingle::Jingle>;
     auto on_initiate(jingle::Jingle jingle) -> bool;
     auto on_add_source(jingle::Jingle jingle) -> bool;
-    // returns valid pointer to source if its mute state was changed
-    auto on_source_mute_info(std::string_view source_name, bool muted) -> const Source*;
 
     JingleHandler(CodecType                      audio_codec_type,
                   CodecType                      video_codec_type,

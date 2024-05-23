@@ -111,8 +111,6 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
         ssrc_map[source.ssrc] = Source{
             .ssrc           = source.ssrc,
             .type           = source_type,
-            .muted          = true,
-            .name           = source.name,
             .participant_id = source.owner,
         };
     }
@@ -372,40 +370,12 @@ auto JingleHandler::on_add_source(jingle::Jingle jingle) -> bool {
                 session.ssrc_map.insert(std::make_pair(src.ssrc, Source{
                                                                      .ssrc           = src.ssrc,
                                                                      .type           = type,
-                                                                     .muted          = true,
-                                                                     .name           = src.name,
                                                                      .participant_id = src.owner,
                                                                  }));
             }
         }
     }
     return true;
-}
-
-auto JingleHandler::on_source_mute_info(std::string_view source_name, bool muted) -> const Source* {
-    if(config::debug_jingle_handler) {
-        PRINT("got source info: name=", source_name, " muted=", muted);
-    }
-    auto& ssrc_map = session.ssrc_map;
-    // is there a better way to iterate over map?
-    auto target = (Source*)(nullptr);
-    for(auto i = ssrc_map.begin(); i != ssrc_map.end(); i = std::next(i)) {
-        auto& source = i->second;
-        if(source.name != source_name) {
-            continue;
-        }
-        target = &source;
-    }
-    assert_p(target, "got source info for unknown source");
-
-    if((target->muted && !muted) || (!target->muted && muted)) {
-        if(config::debug_jingle_handler) {
-            PRINT("source mute state changed for participant ", target->participant_id);
-        }
-        return target;
-    } else {
-        return nullptr;
-    }
 }
 
 JingleHandler::JingleHandler(const CodecType                audio_codec_type,
