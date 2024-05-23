@@ -141,7 +141,6 @@ auto parse_payload_type(const xml::Node& node) -> std::optional<Jingle::Content:
 auto parse_source(const xml::Node& node) -> std::optional<Jingle::Content::RTPDescription::Source> {
     auto r          = Jingle::Content::RTPDescription::Source{};
     auto found_ssrc = false;
-    auto found_name = false;
 
     for(const auto& a : node.attrs) {
         if(a.key == "ssrc") {
@@ -150,13 +149,12 @@ auto parse_source(const xml::Node& node) -> std::optional<Jingle::Content::RTPDe
         } else if(a.key == "xmlns") {
             assert_o(a.value == ns::rtp_ssma, "unsupported xmlns ", a.value);
         } else if(a.key == "name") {
-            r.name     = a.value;
-            found_name = true;
+            r.name = a.value;
         } else {
             WARN("unhandled attribute ", a.key);
         }
     }
-    assert_o(found_ssrc && found_name, "required attributes not found");
+    assert_o(found_ssrc, "required attributes not found");
     auto found_owner = false;
     for(const auto& c : node.children) {
         if(c.name == "parameter") {

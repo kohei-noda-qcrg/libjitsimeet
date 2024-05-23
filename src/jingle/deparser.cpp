@@ -79,8 +79,10 @@ auto deparse_source(const Jingle::Content::RTPDescription::Source& src) -> xml::
                     .append_attrs({
                         {"xmlns", ns::rtp_ssma},
                         {"ssrc", std::to_string(src.ssrc)},
-                        {"name", src.name},
                     });
+    if(!src.name.empty()) {
+        node.append_attrs({{"name", src.name}});
+    }
     if(!src.owner.empty()) {
         node.append_children({
             xml::Node{.name = "ssrc-info", .attrs = {

@@ -77,8 +77,8 @@ struct Jingle::Content::RTPDescription::Source {
     using Parameter = Parameter<true>;
 
     uint32_t    ssrc;
-    std::string name;
-    std::string owner;
+    std::string name  = "";
+    std::string owner = "";
 
     std::vector<Parameter> parameters;
 };
