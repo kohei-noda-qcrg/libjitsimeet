@@ -263,9 +263,24 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
     auto audio_muted = std::optional<bool>();
     auto video_muted = std::optional<bool>();
 
+    // note: jitsi web apps seemed to only accept "{video,audio}muted" attribute,
+    // but they use "SourceInfo" attribute in their presence.
+    // libjitsimeet only uses "{video,audio}muted" in its presence.
+    // so we have to handle both.
+
     for(const auto& payload : presence.children) {
         if(payload.name == xmpp::elm::nick.name && payload.is_attr_equal("xmlns", xmpp::ns::nick)) {
             participant->nick = payload.data;
+        } else if(payload.name == "audiomuted" || payload.name == "videomuted") {
+            auto muted = bool();
+            if(payload.data == "true") {
+                muted = true;
+            } else if(payload.data == "false") {
+                muted = false;
+            } else {
+                WARN("unknown {audio,video}muted data: ", payload.data);
+            }
+            (payload.name == "audiomuted" ? audio_muted : video_muted).emplace(muted);
         } else if(payload.name == "SourceInfo") {
             const auto info_r = json::parse(xml_unescape(payload.data));
             if(!info_r) {
@@ -392,8 +407,6 @@ auto handle_received(Conference* const conf) -> Conference::Worker::Generator {
                         .name = "jitsi_participant_codecType",
                         .data = codec_type->second,
                     },
-                    // note: "SourceInfo" seems to only work in room-to-client presence
-                    // in client-to-room presence, we use "videomuted" and "audiomuted"
                     xml::Node{
                         .name = "videomuted",
                         .data = conf->config.video_muted ? "true" : "false",
