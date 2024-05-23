@@ -40,6 +40,10 @@ struct ConferenceCallbacks : public conference::ConferenceCallbacks {
     virtual auto on_participant_left(const conference::Participant& participant) -> void override {
         print("partitipant left ", participant.participant_id, " ", participant.nick);
     }
+
+    virtual auto on_mute_state_changed(const conference::Participant& participant, const bool is_audio, const bool new_muted) -> void override {
+        print("mute state changed ", participant.participant_id, " ", is_audio ? "audio" : "video", "=", new_muted);
+    }
 };
 
 struct Args {

@@ -251,12 +251,17 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
                                                    Participant{
                                                        .participant_id = from.resource,
                                                        .nick           = "",
+                                                       .audio_muted    = true,
+                                                       .video_muted    = true,
                                                    }});
         participant   = &p.first->second;
         joined        = true;
     } else {
         participant = &i->second;
     }
+
+    auto audio_muted = std::optional<bool>();
+    auto video_muted = std::optional<bool>();
 
     for(const auto& payload : presence.children) {
         if(payload.name == xmpp::elm::nick.name && payload.is_attr_equal("xmlns", xmpp::ns::nick)) {
@@ -281,13 +286,35 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
                 if(!v) {
                     continue;
                 }
-                conf->callbacks->on_source_mute_info(key, v->value);
+                const auto& source_name = key;
+                if(source_name == participant->participant_id + "-a0") {
+                    audio_muted.emplace(v->value);
+                } else if(source_name == participant->participant_id + "-v0") {
+                    video_muted.emplace(v->value);
+                } else {
+                    WARN("unsupported source name format: ", source_name);
+                    continue;
+                }
             }
         }
     }
 
     if(joined) {
         conf->callbacks->on_participant_joined(*participant);
+    }
+    if(audio_muted.has_value()) {
+        const auto muted = *audio_muted;
+        if(participant->audio_muted != muted) {
+            conf->callbacks->on_mute_state_changed(*participant, true, muted);
+            participant->audio_muted = muted;
+        }
+    }
+    if(video_muted.has_value()) {
+        const auto muted = *video_muted;
+        if(participant->video_muted != muted) {
+            conf->callbacks->on_mute_state_changed(*participant, false, muted);
+            participant->video_muted = muted;
+        }
     }
 
     return true;

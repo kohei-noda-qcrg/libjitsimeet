@@ -11,6 +11,8 @@ namespace conference {
 struct Participant {
     std::string participant_id;
     std::string nick;
+    bool        audio_muted;
+    bool        video_muted;
 };
 
 struct ConferenceCallbacks {
@@ -30,7 +32,7 @@ struct ConferenceCallbacks {
     virtual auto on_participant_left(const Participant& /*participant*/) -> void {
     }
 
-    virtual auto on_source_mute_info(const std::string_view /*source_name*/, const bool /*muted*/) -> void {
+    virtual auto on_mute_state_changed(const Participant& /*participant*/, bool /*is_audio*/, bool /*new_muted*/) -> void {
     }
 
     virtual ~ConferenceCallbacks(){};
