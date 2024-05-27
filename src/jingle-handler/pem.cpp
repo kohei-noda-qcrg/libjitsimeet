@@ -1,3 +1,5 @@
+#include <string>
+
 #include "../base64.hpp"
 
 namespace pem {

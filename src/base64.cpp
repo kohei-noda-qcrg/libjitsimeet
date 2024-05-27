@@ -1,4 +1,7 @@
 #include <span>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace base64 {
 namespace {

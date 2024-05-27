@@ -54,7 +54,8 @@ struct Args {
     static auto parse(const int argc, const char* const argv[]) -> Args {
         auto args = Args();
         for(auto i = 1; i < argc; i += 1) {
-            if(std::strcmp(argv[i], "-s") == 0) {
+            const auto arg = std::string_view(argv[i]);
+            if(arg == "-s") {
                 args.secure = false;
             } else {
                 if(args.host == nullptr) {
