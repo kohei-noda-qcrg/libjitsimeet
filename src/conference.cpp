@@ -293,11 +293,11 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
                 if(!object) {
                     continue;
                 }
-                const auto muted = object->children.find("muted");
-                if(muted == object->children.end()) {
+                const auto muted = object->find("muted");
+                if(!muted) {
                     continue;
                 }
-                const auto v = muted->second.get<json::Boolean>();
+                const auto v = muted->get<json::Boolean>();
                 if(!v) {
                     continue;
                 }
