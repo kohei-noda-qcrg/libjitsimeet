@@ -38,7 +38,7 @@ const auto xml_escape_table = std::array{
     std::pair("'", "&apos;"),
 };
 
-auto xml_escape(std::string str) -> std::string {
+[[maybe_unused]] auto xml_escape(std::string str) -> std::string {
     for(auto i = xml_escape_table.begin(); i < xml_escape_table.end(); i += 1) {
         str = replace(str, i->first, i->second);
     }

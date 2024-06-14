@@ -61,18 +61,13 @@ auto set_stun_turn(NiceAgent* const                     agent,
     return true;
 }
 
-auto agent_recv_callback(NiceAgent* const agent,
-                         const guint      stream_id,
-                         const guint      component_id,
-                         const guint      len,
-                         gchar* const     buf,
-                         const gpointer   user_data) -> void {
+auto agent_recv_callback(NiceAgent* const /*agent*/, const guint /*stream_id*/, const guint /*component_id*/, const guint /*len*/, gchar* const buf, const gpointer /*user_data*/) -> void {
     if(config::debug_ice) {
         PRINT("agent-recv: ", buf);
     }
 }
 
-auto candidate_gathering_done(NiceAgent* const agent, const guint stream_id, const gpointer user_data) -> void {
+auto candidate_gathering_done(NiceAgent* const /*agent*/, const guint /*stream_id*/, const gpointer /*user_data*/) -> void {
     if(config::debug_ice) {
         PRINT("candidate-gathering-done");
     }
