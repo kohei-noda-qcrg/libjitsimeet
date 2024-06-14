@@ -10,7 +10,7 @@ auto calc_generic(const std::span<const std::byte> str, const char* const algo) 
     auto buf = std::array<std::byte, N>();
     auto md  = EVP_get_digestbyname(algo);
     auto ctx = EVP_MD_CTX_new();
-    EVP_DigestInit_ex2(ctx, md, NULL);
+    EVP_DigestInit_ex(ctx, md, NULL);
     EVP_DigestUpdate(ctx, str.data(), str.size());
     EVP_DigestFinal_ex(ctx, reinterpret_cast<unsigned char*>(buf.data()), NULL);
     EVP_MD_CTX_free(ctx);
