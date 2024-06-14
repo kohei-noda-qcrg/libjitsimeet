@@ -7,7 +7,7 @@ libjitsimeet_deps = [
   dependency('nice'),
 ]
 
-if host_machine.system() == 'Windows'
+if host_machine.system() == 'windows'
   cpp = meson.get_compiler('cpp')
   libjitsimeet_deps += [
     cpp.find_library('ws2_32'),
