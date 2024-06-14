@@ -1,4 +1,8 @@
+#if !defined _WIN32
 #include <arpa/inet.h>
+#else
+#include <WinSock2.h>
+#endif
 
 #include "../config.hpp"
 #include "../macros/unwrap.hpp"

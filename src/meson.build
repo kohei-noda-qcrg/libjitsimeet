@@ -7,6 +7,14 @@ libjitsimeet_deps = [
   dependency('nice'),
 ]
 
+if host_machine.system() == 'Windows'
+  cpp = meson.get_compiler('cpp')
+  libjitsimeet_deps += [
+    cpp.find_library('ws2_32'),
+    cpp.find_library('Crypt32'),
+  ]
+endif
+
 libjitsimeet_src = files(
   'conference.cpp',
   'caps.cpp',

@@ -1,7 +1,11 @@
 #include <cstdint>
 #include <string>
 
+#if !defined _WIN32
 #include <netdb.h>
+#else
+#include <WinSock2.h>
+#endif
 
 auto hostname_to_addr(const char* const hostname) -> std::string {
     auto r = std::string();
