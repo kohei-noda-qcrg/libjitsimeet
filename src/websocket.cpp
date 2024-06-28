@@ -159,7 +159,7 @@ auto create_connection(const char* const address, const uint32_t port, const cha
     };
     const auto protocols = std::array{&xmpp, (const lws_protocols*)NULL};
 
-    const auto context_creatin_info = lws_context_creation_info{
+    const auto context_creation_info = lws_context_creation_info{
         .port       = CONTEXT_PORT_NO_LISTEN,
         .gid        = gid_t(-1),
         .uid        = uid_t(-1),
@@ -167,7 +167,7 @@ auto create_connection(const char* const address, const uint32_t port, const cha
         .pprotocols = (const lws_protocols**)protocols.data(),
     };
 
-    const auto context = lws_create_context(&context_creatin_info);
+    const auto context = lws_create_context(&context_creation_info);
     DYN_ASSERT(context != NULL);
 
     const auto host      = build_string(address, ":", port);
