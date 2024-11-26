@@ -24,10 +24,10 @@ auto set_stun_turn(NiceAgent* const                     agent,
     for(const auto& es : external_services) {
         if(!stun && es.type == "stun") {
             const auto hostaddr = hostname_to_addr(es.host.data());
-            assert_b(!hostaddr.empty(), "failed to resolve stun server address ", es.host);
+            ensure(!hostaddr.empty(), "failed to resolve stun server address ", es.host);
             const auto port = es.port != 0 ? es.port : default_stun_port;
             if(config::debug_ice) {
-                PRINT("stun address: ", hostaddr, ":", port);
+                line_warn("stun address: ", hostaddr, ":", port);
             }
             g_object_set(agent,
                          "stun-server", hostaddr.data(),
@@ -36,10 +36,10 @@ auto set_stun_turn(NiceAgent* const                     agent,
             stun = true;
         } else if(!turn && es.type == "turns") {
             const auto hostaddr = hostname_to_addr(es.host.data());
-            assert_b(!hostaddr.empty(), "failed to resolve turn server address ", es.host);
+            ensure(!hostaddr.empty(), "failed to resolve turn server address ", es.host);
             const auto port = es.port != 0 ? es.port : default_turn_port;
             if(config::debug_ice) {
-                PRINT("turn address: ", hostaddr, ":", port);
+                line_print("turn address: ", hostaddr, ":", port);
             }
             if(nice_agent_set_relay_info(agent,
                                          stream_id,
@@ -49,8 +49,7 @@ auto set_stun_turn(NiceAgent* const                     agent,
                                          es.username.data(),
                                          es.password.data(),
                                          NICE_RELAY_TYPE_TURN_TLS) != TRUE) {
-                WARN("failed to set relay info");
-                return false;
+                bail("failed to set relay info");
             }
             turn = true;
         }
@@ -63,13 +62,13 @@ auto set_stun_turn(NiceAgent* const                     agent,
 
 auto agent_recv_callback(NiceAgent* const /*agent*/, const guint /*stream_id*/, const guint /*component_id*/, const guint /*len*/, gchar* const buf, const gpointer /*user_data*/) -> void {
     if(config::debug_ice) {
-        PRINT("agent-recv: ", buf);
+        line_print("agent-recv: ", buf);
     }
 }
 
 auto candidate_gathering_done(NiceAgent* const /*agent*/, const guint /*stream_id*/, const gpointer /*user_data*/) -> void {
     if(config::debug_ice) {
-        PRINT("candidate-gathering-done");
+        line_print("candidate-gathering-done");
     }
 }
 
@@ -88,12 +87,12 @@ auto set_remote_candidates(NiceAgent* const                                agent
     auto r    = true;
     auto list = (GSList*)(NULL);
     for(const auto& tc : transport.candidates) {
-        unwrap_ob(type, candidate_type_to_nice(tc.type));
+        unwrap(type, candidate_type_to_nice(tc.type));
         auto nc = nice_candidate_new(type);
         if(const auto addr = str_to_sockaddr(tc.ip_addr.data(), tc.port); addr.s.addr.sa_family != AF_UNSPEC) {
             nc->addr = addr;
         } else {
-            WARN("failed to parse candidate ip address");
+            line_warn("failed to parse candidate ip address");
             r = false;
             goto end;
         }
@@ -107,7 +106,7 @@ auto set_remote_candidates(NiceAgent* const                                agent
         list = g_slist_prepend(list, nc);
     }
     if(nice_agent_set_remote_candidates(agent, stream_id, component_id, list) != int(transport.candidates.size())) {
-        WARN("failed to add candidates");
+        line_warn("failed to add candidates");
         r = false;
         goto end;
     }
@@ -119,7 +118,7 @@ end:
 
 auto MainloopWithRunner::create() -> MainloopWithRunner* {
     const auto mainloop = g_main_loop_new(NULL, FALSE);
-    assert_p(mainloop != NULL, "failed to create mainloop");
+    ensure(mainloop != NULL, "failed to create mainloop");
 
     auto ret = new MainloopWithRunner();
     ret->mainloop.reset(mainloop);
@@ -140,11 +139,11 @@ MainloopWithRunner::~MainloopWithRunner() {
 auto setup(const std::span<const xmpp::Service>                  external_services,
            const jingle::Jingle::Content::IceUdpTransport* const transport) -> std::optional<Agent> {
     auto mainloop = AutoMainloop(MainloopWithRunner::create());
-    assert_o(mainloop.get() != nullptr);
+    ensure(mainloop.get() != nullptr);
     const auto mainloop_ctx = g_main_loop_get_context(mainloop->mainloop.get());
 
     auto agent = AutoNiceAgent(nice_agent_new(mainloop_ctx, NICE_COMPATIBILITY_RFC5245));
-    assert_o(agent.get() != NULL, "failed to create nice agent");
+    ensure(agent.get() != NULL, "failed to create nice agent");
     g_object_set(agent.get(),
                  "ice-tcp", FALSE,
                  "upnp", FALSE,
@@ -152,21 +151,21 @@ auto setup(const std::span<const xmpp::Service>                  external_servic
 
     const auto stream_id    = nice_agent_add_stream(agent.get(), 1);
     const auto component_id = guint(1);
-    assert_o(stream_id > 0, "failed to add stream");
-    assert_o(set_stun_turn(agent.get(), external_services, stream_id, component_id),
-             "failed to setup stun & turn servers");
-    assert_o(nice_agent_attach_recv(agent.get(), stream_id, component_id, mainloop_ctx, agent_recv_callback, nullptr) == TRUE,
-             "failed to attach recv callback");
+    ensure(stream_id > 0, "failed to add stream");
+    ensure(set_stun_turn(agent.get(), external_services, stream_id, component_id),
+           "failed to setup stun & turn servers");
+    ensure(nice_agent_attach_recv(agent.get(), stream_id, component_id, mainloop_ctx, agent_recv_callback, nullptr) == TRUE,
+           "failed to attach recv callback");
     if(transport) {
-        assert_o(nice_agent_set_remote_credentials(agent.get(), stream_id, transport->ufrag.data(), transport->pwd.data()) == TRUE,
-                 "failed to set credentials");
+        ensure(nice_agent_set_remote_credentials(agent.get(), stream_id, transport->ufrag.data(), transport->pwd.data()) == TRUE,
+               "failed to set credentials");
     }
-    assert_o(g_signal_connect(agent.get(), "candidate-gathering-done", G_CALLBACK(candidate_gathering_done), nullptr) > 0,
-             "failed to register candidate-gathering-done callback");
-    assert_o(nice_agent_gather_candidates(agent.get(), stream_id) == TRUE,
-             "failed to gather candidates");
+    ensure(g_signal_connect(agent.get(), "candidate-gathering-done", G_CALLBACK(candidate_gathering_done), nullptr) > 0,
+           "failed to register candidate-gathering-done callback");
+    ensure(nice_agent_gather_candidates(agent.get(), stream_id) == TRUE,
+           "failed to gather candidates");
     if(transport) {
-        assert_o(set_remote_candidates(agent.get(), *transport, stream_id, component_id), "failed to add candidates");
+        ensure(set_remote_candidates(agent.get(), *transport, stream_id, component_id), "failed to add candidates");
     }
 
     nice_debug_enable(config::debug_ice ? TRUE : FALSE);
@@ -251,8 +250,8 @@ auto candidate_type_from_nice(const NiceCandidateType type) -> std::optional<jin
 auto get_local_credentials(const Agent& agent) -> std::optional<LocalCredential> {
     auto ufrag = (gchar*)(NULL);
     auto pwd   = (gchar*)(NULL);
-    assert_o(nice_agent_get_local_credentials(agent.agent.get(), agent.stream_id, &ufrag, &pwd) == TRUE,
-             "failed to get local credentials");
+    ensure(nice_agent_get_local_credentials(agent.agent.get(), agent.stream_id, &ufrag, &pwd) == TRUE,
+           "failed to get local credentials");
     return LocalCredential{AutoGChar(ufrag), AutoGChar(pwd)};
 }
 

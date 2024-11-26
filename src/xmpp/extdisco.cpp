@@ -1,5 +1,4 @@
 #include "extdisco.hpp"
-#include "../macros/assert.hpp"
 #include "../util/assert.hpp"
 #include "../util/charconv.hpp"
 #include "../xml/xml.hpp"
@@ -42,21 +41,21 @@ auto parse_service(const xml::Node& node) -> std::optional<Service> {
             } else if(a.value == "0") {
                 r.restricted = false;
             } else {
-                WARN("unknown restricted");
+                line_warn("unknown restricted");
                 return std::nullopt;
             }
         } else {
-            WARN("unhandled attribute ", a.key);
+            line_warn("unhandled attribute ", a.key);
         }
     }
     if(!found_type || !found_host) {
-        WARN("required attributes not found");
+        line_warn("required attributes not found");
         return std::nullopt;
     }
     for(const auto& c : node.children) {
         if(0) {
         } else {
-            WARN("unhandled child ", c.name);
+            line_warn("unhandled child ", c.name);
         }
     }
     return r;
@@ -71,7 +70,7 @@ auto parse_services(const xml::Node& services) -> std::optional<std::vector<Serv
         if(const auto s = parse_service(service); s) {
             r.push_back(*s);
         } else {
-            WARN("failed to parse service");
+            line_warn("failed to parse service");
             continue;
         }
     }

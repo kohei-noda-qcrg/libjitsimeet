@@ -34,4 +34,4 @@ libjitsimeet_src = files(
   'jingle-handler/pem.cpp',
   'jingle-handler/hostaddr.cpp',
   'jingle-handler/ice.cpp',
-) + tinyxml_src + tinyjson_src
+) + tinyxml_files + tinyjson_files

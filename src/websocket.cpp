@@ -63,7 +63,7 @@ auto append(std::vector<std::byte>& vec, void* in, const size_t len) -> void {
 auto xmpp_callback(lws* wsi, lws_callback_reasons reason, void* const /*user*/, void* const in, const size_t len) -> int {
     const auto proto = lws_get_protocol(wsi);
     if(config::debug_websocket) {
-        PRINT(__func__, " reason=", int(reason), " protocol=", proto);
+        line_print(__func__, " reason=", int(reason), " protocol=", proto);
     }
     if(proto == NULL) {
         return 0;
@@ -76,27 +76,27 @@ auto xmpp_callback(lws* wsi, lws_callback_reasons reason, void* const /*user*/, 
     switch(reason) {
     case LWS_CALLBACK_CLIENT_ESTABLISHED:
         if(config::debug_websocket) {
-            PRINT(__func__, " connection established");
+            line_print(__func__, " connection established");
         }
         conn->conn_state = ConnectionState::Connected;
         break;
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         if(config::debug_websocket) {
-            PRINT(__func__, " connection error");
+            line_print(__func__, " connection error");
         }
         conn->conn_state = ConnectionState::Destroyed;
         break;
     case LWS_CALLBACK_CLOSED:
     case LWS_CALLBACK_CLIENT_CLOSED:
         if(config::debug_websocket) {
-            PRINT(__func__, " connection close");
+            line_print(__func__, " connection close");
         }
         conn->conn_state = ConnectionState::Destroyed;
         break;
     case LWS_CALLBACK_CLIENT_RECEIVE: {
         if(config::dump_websocket_packets) {
             auto str = std::string_view(std::bit_cast<char*>(in));
-            PRINT(">>> ", str);
+            line_print(">>> ", str);
         }
         const auto remaining = lws_remaining_packet_payload(wsi);
         const auto final     = lws_is_final_fragment(wsi);
@@ -116,7 +116,7 @@ auto xmpp_callback(lws* wsi, lws_callback_reasons reason, void* const /*user*/, 
     } break;
     case LWS_CALLBACK_CLIENT_WRITEABLE:
         if(config::debug_websocket) {
-            PRINT(__func__, " writeable");
+            line_print(__func__, " writeable");
         }
         for(auto& buf : conn->buffer_to_send.swap()) {
             write_back_str(conn->wsi, buf);
@@ -124,7 +124,7 @@ auto xmpp_callback(lws* wsi, lws_callback_reasons reason, void* const /*user*/, 
         break;
     default:
         if(config::debug_websocket) {
-            PRINT(__func__, " unhandled callback");
+            line_print(__func__, " unhandled callback");
         }
         break;
     }
@@ -168,7 +168,7 @@ auto create_connection(const char* const address, const uint32_t port, const cha
     };
 
     const auto context = lws_create_context(&context_creation_info);
-    DYN_ASSERT(context != NULL);
+    dynamic_assert(context != NULL);
 
     const auto host      = build_string(address, ":", port);
     const auto ssl_flags = secure ? LCCSCF_USE_SSL : LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
@@ -184,7 +184,7 @@ auto create_connection(const char* const address, const uint32_t port, const cha
         .ietf_version_or_minus_one = -1,
     };
     const auto wsi = lws_client_connect_via_info(&client_connect_info);
-    DYN_ASSERT(wsi != NULL);
+    dynamic_assert(wsi != NULL);
 
     while(conn->conn_state == ConnectionState::Initialized) {
         lws_service(context, 50);
@@ -206,7 +206,7 @@ auto free_connection(Connection* const conn) -> void {
 
 auto send_str(Connection* const conn, const std::string_view str) -> void {
     if(config::dump_websocket_packets) {
-        PRINT("<<< ", str);
+        line_print("<<< ", str);
     }
     conn->buffer_to_send.push(std::string(str));
     lws_callback_on_writable(conn->wsi);

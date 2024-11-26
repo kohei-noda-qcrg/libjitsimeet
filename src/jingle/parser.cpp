@@ -17,14 +17,14 @@ auto parse_template(const xml::Node& node) -> std::optional<T> {
         if(0) {
             found = true;
         } else {
-            WARN("unhandled attribute ", a.key);
+            line_warn("unhandled attribute ", a.key);
         }
     }
-    assert_o(found, "required attributes not found");
+    ensure(found, "required attributes not found");
     for(const auto& c : node.children) {
         if(0) {
         } else {
-            WARN("unhandled child ", c.name);
+            line_warn("unhandled child ", c.name);
         }
     }
     return r;
@@ -39,7 +39,7 @@ auto parse_template(const xml::Node& node) -> std::optional<T> {
 
 #define unwrap_parsed_or_nullopt(opt, field) \
     if(const auto p = opt; !p) {             \
-        WARN("parse failed");                \
+        line_warn("parse failed");           \
     } else {                                 \
         field.push_back(*p);                 \
     }
@@ -48,7 +48,7 @@ auto parse_template(const xml::Node& node) -> std::optional<T> {
     if(const auto e = arr.find(value); e != nullptr) { \
         field = e->first;                              \
     } else {                                           \
-        WARN("unknown enum ", value);                  \
+        line_warn("unknown enum ", value);             \
         return std::nullopt;                           \
     }
 
@@ -66,16 +66,16 @@ auto parse_parameter(const xml::Node& node, const std::string_view ns) -> std::o
             r.value     = a.value;
             found_value = true;
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns, "unsupported xmlns ", a.value);
+            ensure(a.value == ns, "unsupported xmlns ", a.value);
         } else {
-            WARN("unhandled attribute ", a.key);
+            line_warn("unhandled attribute ", a.key);
         }
     }
-    assert_o(found_name && (optional_value || found_value), "required attributes not found");
+    ensure(found_name && (optional_value || found_value), "required attributes not found");
     for(const auto& c : node.children) {
         if(0) {
         } else {
-            WARN("unhandled child ", c.name);
+            line_warn("unhandled child ", c.name);
         }
     }
     return r;
@@ -92,16 +92,16 @@ auto parse_rtcp_fb(const xml::Node& node) -> std::optional<Jingle::Content::RTPD
         } else if(a.key == "subtype") {
             r.subtype = a.value;
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns::rtp_rtcp_fb, "unsupported xmlns ", a.value);
+            ensure(a.value == ns::rtp_rtcp_fb, "unsupported xmlns ", a.value);
         } else {
-            WARN("unhandled attribute ", a.key);
+            line_warn("unhandled attribute ", a.key);
         }
     }
-    assert_o(found_type, "required attributes not found");
+    ensure(found_type, "required attributes not found");
     for(const auto& c : node.children) {
         if(0) {
         } else {
-            WARN("unhandled child ", c.name);
+            line_warn("unhandled child ", c.name);
         }
     }
     return r;
@@ -122,17 +122,17 @@ auto parse_payload_type(const xml::Node& node) -> std::optional<Jingle::Content:
         } else if(a.key == "name") {
             r.name = a.value;
         } else {
-            WARN("unhandled attribute ", a.key);
+            line_warn("unhandled attribute ", a.key);
         }
     }
-    assert_o(found_id, "required attributes not found");
+    ensure(found_id, "required attributes not found");
     for(const auto& c : node.children) {
         if(c.name == "rtcp-fb") {
             unwrap_parsed_or_nullopt(parse_rtcp_fb(c), r.rtcp_fbs);
         } else if(c.name == "parameter") {
             unwrap_parsed_or_nullopt(parse_parameter<false>(c, {}), r.parameters);
         } else {
-            WARN("unhandled child ", c.name);
+            line_warn("unhandled child ", c.name);
         }
     }
     return r;
@@ -147,35 +147,35 @@ auto parse_source(const xml::Node& node) -> std::optional<Jingle::Content::RTPDe
             num_or_nullopt(r.ssrc, a.value);
             found_ssrc = true;
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns::rtp_ssma, "unsupported xmlns ", a.value);
+            ensure(a.value == ns::rtp_ssma, "unsupported xmlns ", a.value);
         } else if(a.key == "name") {
             r.name = a.value;
         } else {
-            WARN("unhandled attribute ", a.key);
+            line_warn("unhandled attribute ", a.key);
         }
     }
-    assert_o(found_ssrc, "required attributes not found");
+    ensure(found_ssrc, "required attributes not found");
     auto found_owner = false;
     for(const auto& c : node.children) {
         if(c.name == "parameter") {
             unwrap_parsed_or_nullopt(parse_parameter<true>(c, ns::rtp), r.parameters);
         } else if(c.name == "ssrc-info") {
             if(!c.is_attr_equal("xmlns", ns::jitsi_jitmeet)) {
-                WARN("invalid ssrc-info");
+                line_warn("invalid ssrc-info");
                 return std::nullopt;
             }
             if(const auto owner_o = c.find_attr("owner"); owner_o) {
                 r.owner     = *owner_o;
                 found_owner = true;
             } else {
-                WARN("ssrc-info has no owner");
+                line_warn("ssrc-info has no owner");
                 return std::nullopt;
             }
         } else {
-            WARN("unhandled child ", c.name);
+            line_warn("unhandled child ", c.name);
         }
     }
-    assert_o(found_owner, "required children not found");
+    ensure(found_owner, "required children not found");
     return r;
 }
 
@@ -192,16 +192,16 @@ auto parse_rtp_header_ext(const xml::Node& node) -> std::optional<Jingle::Conten
             r.uri     = a.value;
             found_uri = true;
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns::rtp_headerext, "unsupported xmlns ", a.value);
+            ensure(a.value == ns::rtp_headerext, "unsupported xmlns ", a.value);
         } else {
-            WARN("unhandled attribute ", a.key);
+            line_warn("unhandled attribute ", a.key);
         }
     }
-    assert_o(found_id && found_uri, "required attributes not found");
+    ensure(found_id && found_uri, "required attributes not found");
     for(const auto& c : node.children) {
         if(0) {
         } else {
-            WARN("unhandled child ", c.name);
+            line_warn("unhandled child ", c.name);
         }
     }
     return r;
@@ -216,24 +216,24 @@ auto parse_ssrc_group(const xml::Node& node) -> std::optional<Jingle::Content::R
             search_str_array_or_null(ssrc_group_semantics_str, r.semantics, a.value);
             found_semantics = true;
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns::rtp_ssma, "unsupported xmlns ", a.value);
+            ensure(a.value == ns::rtp_ssma, "unsupported xmlns ", a.value);
         } else {
-            WARN("unhandled attribute ", a.key);
+            line_warn("unhandled attribute ", a.key);
         }
     }
-    assert_o(found_semantics, "required attributes not found");
+    ensure(found_semantics, "required attributes not found");
     for(const auto& c : node.children) {
         if(c.name == "source") {
             const auto attr = c.find_attr("ssrc");
             if(!attr.has_value()) {
-                WARN("source has not ssrc attribute");
+                line_warn("source has not ssrc attribute");
                 return std::nullopt;
             }
             auto ssrc = uint32_t(0);
             num_or_nullopt(ssrc, *attr);
             r.ssrcs.push_back(ssrc);
         } else {
-            WARN("unhandled child ", c.name);
+            line_warn("unhandled child ", c.name);
         }
     }
     return r;
@@ -246,13 +246,13 @@ auto parse_rtp_description(const xml::Node& node) -> std::optional<Jingle::Conte
         if(a.key == "media") {
             r.media = a.value;
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns::rtp, "unsupported xmlns ", a.value);
+            ensure(a.value == ns::rtp, "unsupported xmlns ", a.value);
         } else if(a.key == "ssrc") {
             num_or_nullopt(r.ssrc, a.value);
         } else if(a.key == "maxptime") {
             // TODO: handle maxptime
         } else {
-            WARN("unhandled attribute ", a.key);
+            line_warn("unhandled attribute ", a.key);
         }
     }
     for(const auto& c : node.children) {
@@ -267,7 +267,7 @@ auto parse_rtp_description(const xml::Node& node) -> std::optional<Jingle::Conte
         } else if(c.name == "rtcp-mux") {
             r.support_mux = true;
         } else {
-            WARN("unhandled child ", c.name);
+            line_warn("unhandled child ", c.name);
         }
     }
     return r;
@@ -275,7 +275,7 @@ auto parse_rtp_description(const xml::Node& node) -> std::optional<Jingle::Conte
 
 auto parse_fingerprint(const xml::Node& node) -> std::optional<Jingle::Content::IceUdpTransport::FingerPrint> {
     if(node.data.empty()) {
-        WARN("empty fingerprint");
+        line_warn("empty fingerprint");
         return std::nullopt;
     }
 
@@ -298,20 +298,20 @@ auto parse_fingerprint(const xml::Node& node) -> std::optional<Jingle::Content::
             } else if(a.value == "false") {
                 r.required = false;
             } else {
-                WARN("invalid required");
+                line_warn("invalid required");
                 return std::nullopt;
             }
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns::dtls, "unsupported xmlns ", a.value);
+            ensure(a.value == ns::dtls, "unsupported xmlns ", a.value);
         } else {
-            WARN("unhandled attribute ", a.key);
+            line_warn("unhandled attribute ", a.key);
         }
     }
-    assert_o(found_hash && found_setup, "required attributes not found");
+    ensure(found_hash && found_setup, "required attributes not found");
     for(const auto& c : node.children) {
         if(0) {
         } else {
-            WARN("unhandled child ", c.name);
+            line_warn("unhandled child ", c.name);
         }
     }
     return r;
@@ -360,7 +360,7 @@ auto parse_candidate(const xml::Node& node) -> std::optional<Jingle::Content::Ic
             found_ip_addr = true;
         } else if(a.key == "protocol") {
             if(a.value != "udp") {
-                WARN("unsupported protocol");
+                line_warn("unsupported protocol");
                 return std::nullopt;
             }
         } else if(a.key == "network") {
@@ -370,14 +370,14 @@ auto parse_candidate(const xml::Node& node) -> std::optional<Jingle::Content::Ic
         } else if(a.key == "rel-port") {
             // ignore
         } else {
-            WARN("unhandled attribute ", a.key);
+            line_warn("unhandled attribute ", a.key);
         }
     }
-    assert_o(found_component && found_generation && found_port && found_priority && found_type && found_foundation && found_id && found_ip_addr, "required attributes not found");
+    ensure(found_component && found_generation && found_port && found_priority && found_type && found_foundation && found_id && found_ip_addr, "required attributes not found");
     for(const auto& c : node.children) {
         if(0) {
         } else {
-            WARN("unhandled child ", c.name);
+            line_warn("unhandled child ", c.name);
         }
     }
     return r;
@@ -396,12 +396,12 @@ auto parse_ice_udp_transport(const xml::Node& node) -> std::optional<Jingle::Con
             r.ufrag     = a.value;
             found_ufrag = true;
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns::transport_ice_udp, "unsupported xmlns ", a.value);
+            ensure(a.value == ns::transport_ice_udp, "unsupported xmlns ", a.value);
         } else {
-            WARN("unhandled attribute ", a.key);
+            line_warn("unhandled attribute ", a.key);
         }
     }
-    assert_o(found_pwd && found_ufrag, "required attributes not found");
+    ensure(found_pwd && found_ufrag, "required attributes not found");
     auto found_websocket = false;
     for(const auto& c : node.children) {
         if(c.name == "web-socket") {
@@ -419,10 +419,10 @@ auto parse_ice_udp_transport(const xml::Node& node) -> std::optional<Jingle::Con
         } else if(c.name == "candidate") {
             unwrap_parsed_or_nullopt(parse_candidate(c), r.candidates);
         } else {
-            WARN("unhandled child ", c.name);
+            line_warn("unhandled child ", c.name);
         }
     }
-    assert_o(found_websocket, "required children not found");
+    ensure(found_websocket, "required children not found");
     return r;
 }
 
@@ -442,35 +442,35 @@ auto parse_content(const xml::Node& node) -> std::optional<Jingle::Content> {
             } else if(a.value == "responder") {
                 r.is_from_initiator = false;
             } else {
-                WARN("unknown creator ", a.value);
+                line_warn("unknown creator ", a.value);
                 return std::nullopt;
             }
         } else {
-            WARN("unhandled attribute ", a.key);
+            line_warn("unhandled attribute ", a.key);
         }
     }
-    assert_o(found_name, "required attributes not found");
+    ensure(found_name, "required attributes not found");
     for(const auto& c : node.children) {
         if(c.name == "description") {
             if(const auto xmlns = c.find_attr("xmlns"); xmlns) {
                 if(*xmlns == ns::rtp) {
                     unwrap_parsed_or_nullopt(parse_rtp_description(c), r.descriptions);
                 } else {
-                    WARN("unknown cowntent type ", *xmlns);
+                    line_warn("unknown cowntent type ", *xmlns);
                 }
             } else {
-                WARN("no xmlns ", *xmlns);
+                line_warn("no xmlns ", *xmlns);
             }
         } else if(c.name == "transport") {
             if(const auto xmlns = c.find_attr("xmlns"); !xmlns) {
-                WARN("no xmlns in transport");
+                line_warn("no xmlns in transport");
             } else if(*xmlns != ns::transport_ice_udp) {
-                WARN("unsupported transport", *xmlns);
+                line_warn("unsupported transport", *xmlns);
             } else {
                 unwrap_parsed_or_nullopt(parse_ice_udp_transport(c), r.transports);
             }
         } else {
-            WARN("unhandled child ", c.name);
+            line_warn("unhandled child ", c.name);
         }
     }
     return r;
@@ -485,19 +485,19 @@ auto parse_group(const xml::Node& node) -> std::optional<Jingle::Group> {
             search_str_array_or_null(group_semantics_str, r.semantics, a.value);
             found_semantics = true;
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns::grouping, "unsupported xmlns ", a.value);
+            ensure(a.value == ns::grouping, "unsupported xmlns ", a.value);
         } else {
-            WARN("unhandled attribute ", a.key);
+            line_warn("unhandled attribute ", a.key);
         }
     }
-    assert_o(found_semantics, "required attributes not found");
+    ensure(found_semantics, "required attributes not found");
     for(const auto& c : node.children) {
         if(c.name == "content") {
             if(const auto name = c.find_attr("name"); name) {
                 r.contents.emplace_back(*name);
             }
         } else {
-            WARN("unhandled child ", c.name);
+            line_warn("unhandled child ", c.name);
         }
     }
     return r;
@@ -521,25 +521,25 @@ auto parse(const xml::Node& node) -> std::optional<Jingle> {
         } else if(a.key == "responder") {
             r.responder = a.value;
         } else if(a.key == "xmlns") {
-            assert_o(a.value == ns::jingle, "unsupported xmlns ", a.value);
+            ensure(a.value == ns::jingle, "unsupported xmlns ", a.value);
         } else {
-            WARN("unhandled attribute ", a.key);
+            line_warn("unhandled attribute ", a.key);
         }
     }
-    assert_o(found_action && found_sid, "required attributes not found");
+    ensure(found_action && found_sid, "required attributes not found");
     for(const auto& c : node.children) {
         if(c.name == "content") {
             unwrap_parsed_or_nullopt(parse_content(c), r.contents);
         } else if(c.name == "group") {
             if(const auto p = parse_group(c); !p) {
-                WARN("parse failed");
+                line_warn("parse failed");
             } else {
                 r.group.reset(new Jingle::Group{*p});
             }
         } else if(c.name == "bridge-session") {
             // ignore
         } else {
-            WARN("unhandled child ", c.name);
+            line_warn("unhandled child ", c.name);
         }
     }
     return r;

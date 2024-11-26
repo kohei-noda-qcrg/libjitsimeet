@@ -95,7 +95,7 @@ auto main(const int argc, const char* const argv[]) -> int {
             const auto payload = std::string_view(std::bit_cast<char*>(data.data()), data.size());
             const auto done    = negotiator->feed_payload(payload);
             if(done) {
-                event.wakeup();
+                event.notify();
                 return ws::ReceiverResult::Complete;
             } else {
                 return ws::ReceiverResult::Handled;
@@ -107,8 +107,6 @@ auto main(const int argc, const char* const argv[]) -> int {
         jid    = std::move(negotiator->jid);
         ext_sv = std::move(negotiator->external_services);
     }
-
-    event.clear();
 
     // join conference
     {
@@ -149,7 +147,7 @@ auto main(const int argc, const char* const argv[]) -> int {
                                  });
 
             conference->send_iq(std::move(accept_iq), [](bool success) -> void {
-                DYN_ASSERT(success, "failed to send accept iq");
+                dynamic_assert(success, "failed to send accept iq");
             });
         }
 

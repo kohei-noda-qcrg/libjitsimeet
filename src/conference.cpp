@@ -7,7 +7,7 @@
 #include "macros/unwrap.hpp"
 #include "random.hpp"
 #include "sha.hpp"
-#include "util/misc.hpp"
+#include "util/split.hpp"
 #include "xmpp/elements.hpp"
 #include "json/json.hpp"
 
@@ -117,9 +117,9 @@ auto jid_node_to_muc_resource(const std::string_view node) -> std::string {
 }
 
 auto handle_iq_get(Conference* const conf, const xml::Node& iq) -> bool {
-    unwrap_ob(from, iq.find_attr("from"));
-    unwrap_ob(id, iq.find_attr("id"));
-    unwrap_pb(query, iq.find_first_child("query"));
+    unwrap(from, iq.find_attr("from"));
+    unwrap(id, iq.find_attr("id"));
+    unwrap(query, iq.find_first_child("query"));
     auto iqr = xmpp::elm::iq.clone()
                    .append_attrs({
                        {"from", conf->config.jid.as_full()},
@@ -155,17 +155,17 @@ auto handle_iq_get(Conference* const conf, const xml::Node& iq) -> bool {
 }
 
 auto handle_iq_set(Conference* const conf, const xml::Node& iq) -> bool {
-    unwrap_ob(from, iq.find_attr("from"));
-    unwrap_ob(from_jid, xmpp::Jid::parse(from));
+    unwrap(from, iq.find_attr("from"));
+    unwrap(from_jid, xmpp::Jid::parse(from));
     if(from_jid.resource != "focus") {
         return false;
     }
-    unwrap_ob(id, iq.find_attr("id"));
-    unwrap_pb(jingle_node, iq.find_first_child("jingle"));
-    unwrap_ob_mut(jingle, jingle::parse(jingle_node));
+    unwrap(id, iq.find_attr("id"));
+    unwrap(jingle_node, iq.find_first_child("jingle"));
+    unwrap_mut(jingle, jingle::parse(jingle_node));
 
     if(config::debug_conference) {
-        PRINT("jingle action ", int(jingle.action));
+        line_assert("jingle action ", int(jingle.action));
     }
     switch(jingle.action) {
     case jingle::Jingle::Action::SessionInitiate:
@@ -175,7 +175,7 @@ auto handle_iq_set(Conference* const conf, const xml::Node& iq) -> bool {
         conf->callbacks->on_jingle_add_source(std::move(jingle));
         goto ack;
     default:
-        WARN("unimplemented jingle action: ", int(jingle.action));
+        line_warn("unimplemented jingle action: ", int(jingle.action));
         return true;
     }
 
@@ -192,13 +192,13 @@ ack:
 }
 
 auto handle_iq_result(Conference* const conf, const xml::Node& iq, bool success) -> bool {
-    unwrap_ob(id, iq.find_attr("id"));
+    unwrap(id, iq.find_attr("id"));
     for(auto i = conf->sent_iqs.begin(); i != conf->sent_iqs.end(); i += 1) {
         if(i->id != id) {
             continue;
         }
         if(!success) {
-            WARN("iq ", id, " failed");
+            line_warn("iq ", id, " failed");
         }
         if(i->on_result) {
             i->on_result(success);
@@ -206,12 +206,11 @@ auto handle_iq_result(Conference* const conf, const xml::Node& iq, bool success)
         conf->sent_iqs.erase(i);
         return true;
     }
-    WARN("stray iq result");
-    return false;
+    bail("stray iq result");
 }
 
 auto handle_iq(Conference* const conf, const xml::Node& iq) -> bool {
-    unwrap_ob(type, iq.find_attr("type"));
+    unwrap(type, iq.find_attr("type"));
     if(type == "get") {
         return handle_iq_get(conf, iq);
     } else if(type == "set") {
@@ -225,12 +224,12 @@ auto handle_iq(Conference* const conf, const xml::Node& iq) -> bool {
 }
 
 auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool {
-    const auto response = xml::parse(conf->worker_arg).as_value();
+    const auto response = xml::parse(conf->worker_arg).value();
 
-    unwrap_ob(from_str, presence.find_attr("from"));
-    unwrap_ob(from, xmpp::Jid::parse(from_str));
+    unwrap(from_str, presence.find_attr("from"));
+    unwrap(from, xmpp::Jid::parse(from_str));
     if(config::debug_conference) {
-        PRINT("got presence from ", from_str);
+        line_print("got presence from ", from_str);
     }
     if(const auto type = presence.find_attr("type"); type) {
         if(*type == "unavailable") {
@@ -238,7 +237,7 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
                 conf->callbacks->on_participant_left(i->second);
                 conf->participants.erase(i);
             } else {
-                WARN("got unavailable presence from unknown participant");
+                line_warn("got unavailable presence from unknown participant");
             }
         }
         return true;
@@ -278,15 +277,13 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
             } else if(payload.data == "false") {
                 muted = false;
             } else {
-                WARN("unknown {audio,video}muted data: ", payload.data);
+                line_warn("unknown {audio,video}muted data: ", payload.data);
             }
             (payload.name == "audiomuted" ? audio_muted : video_muted).emplace(muted);
         } else if(payload.name == "SourceInfo") {
             const auto info_r = json::parse(xml_unescape(payload.data));
-            if(!info_r) {
-                WARN("failed to parse SourceInfo: ", info_r.as_error().cstr());
-            }
-            const auto& info = info_r.as_value();
+            dynamic_assert("failed to parse SourceInfo");
+            const auto& info = info_r.value();
             for(auto i = info.children.begin(); i != info.children.end(); i = std::next(i)) {
                 const auto& [key, value] = *i;
                 const auto object        = value.get<json::Object>();
@@ -307,7 +304,7 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
                 } else if(source_name == participant->participant_id + "-v0") {
                     video_muted.emplace(v->value);
                 } else {
-                    WARN("unsupported source name format: ", source_name);
+                    line_warn("unsupported source name format: ", source_name);
                     continue;
                 }
             }
@@ -366,18 +363,18 @@ auto handle_received(Conference* const conf) -> Conference::Worker::Generator {
         conf->callbacks->send_payload(xml::deparse(iq));
         co_yield true;
 
-        const auto response = xml::parse(conf->worker_arg).as_value();
-        DYN_ASSERT(response.name == "iq", "unexpected response");
-        DYN_ASSERT(response.is_attr_equal("id", id), "unexpected iq");
-        DYN_ASSERT(response.is_attr_equal("type", "result"), "unexpected iq");
+        const auto response = xml::parse(conf->worker_arg).value();
+        dynamic_assert(response.name == "iq", "unexpected response");
+        dynamic_assert(response.is_attr_equal("id", id), "unexpected iq");
+        dynamic_assert(response.is_attr_equal("type", "result"), "unexpected iq");
         const auto conference = response.find_first_child("conference");
-        DYN_ASSERT(conference != nullptr);
-        DYN_ASSERT(conference->is_attr_equal("ready", "true"), "conference not ready");
+        dynamic_assert(conference != nullptr);
+        dynamic_assert(conference->is_attr_equal("ready", "true"), "conference not ready");
     }
     // presence
     {
         const auto codec_type = codec_type_str.find(conf->config.video_codec_type);
-        DYN_ASSERT(codec_type != nullptr, "invalid codec type config");
+        dynamic_assert(codec_type != nullptr, "invalid codec type config");
         const auto presence =
             xmpp::elm::presence.clone()
                 .append_attrs({
@@ -429,16 +426,16 @@ loop:
     do {
         const auto response_r = xml::parse(conf->worker_arg);
         if(!response_r) {
-            WARN("xml parse error: ", int(response_r.as_error()));
+            line_warn("xml parse error");
             break;
         }
-        const auto& response = response_r.as_value();
+        const auto& response = response_r.value();
         if(response.name == "iq") {
             yield = handle_iq(conf, response);
         } else if(response.name == "presence") {
             yield = handle_presence(conf, response);
         } else {
-            WARN("not implemented xmpp message ", response.name);
+            line_warn("not implemented xmpp message ", response.name);
         }
     } while(0);
     co_yield yield;

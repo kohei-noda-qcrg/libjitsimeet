@@ -1,6 +1,5 @@
 #include "negotiator.hpp"
 #include "../config.hpp"
-#include "../macros/assert.hpp"
 #include "../util/assert.hpp"
 #include "../util/coroutine.hpp"
 #include "../xml/xml.hpp"
@@ -10,7 +9,7 @@ namespace xmpp {
 namespace {
 auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
     if(config::debug_xmpp_connection) {
-        PRINT("negotiation started");
+        line_print("negotiation started");
     }
     auto& self = *negotiator;
     // open
@@ -22,7 +21,7 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
         co_yield true;
 
         while(true) {
-            const auto response = xml::parse(self.worker_arg).as_value();
+            const auto response = xml::parse(self.worker_arg).value();
             if(response.name == "open" && response.is_attr_equal("from", self.host)) {
                 break;
             }
@@ -34,7 +33,7 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
         co_yield true;
 
         while(true) {
-            const auto response = xml::parse(self.worker_arg).as_value();
+            const auto response = xml::parse(self.worker_arg).value();
             if(response.name == "stream:features") {
                 break;
             }
@@ -47,8 +46,8 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
         self.callbacks->send_payload(xml::deparse(auth));
         co_yield true;
 
-        const auto response = xml::parse(self.worker_arg).as_value();
-        DYN_ASSERT(response.name == "success");
+        const auto response = xml::parse(self.worker_arg).value();
+        dynamic_assert(response.name == "success");
     }
     // open
     {
@@ -58,8 +57,8 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
         self.callbacks->send_payload(xml::deparse(open));
         co_yield true;
 
-        const auto response = xml::parse(self.worker_arg).as_value();
-        DYN_ASSERT(response.name == "open");
+        const auto response = xml::parse(self.worker_arg).value();
+        dynamic_assert(response.name == "open");
     }
     // bind
     {
@@ -76,21 +75,21 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
         co_yield true;
 
         while(true) {
-            const auto response = xml::parse(self.worker_arg).as_value();
+            const auto response = xml::parse(self.worker_arg).value();
             if(response.name != "iq") {
                 co_yield false;
                 continue;
             }
-            DYN_ASSERT(response.is_attr_equal("id", id), "unexpected iq");
+            dynamic_assert(response.is_attr_equal("id", id), "unexpected iq");
             const auto jid_n = response.find_first_child("bind", "jid");
-            DYN_ASSERT(jid_n != nullptr, "jid not found in iq response");
+            dynamic_assert(jid_n != nullptr, "jid not found in iq response");
             auto jid_o = Jid::parse(jid_n->data);
-            DYN_ASSERT(jid_o.has_value());
+            dynamic_assert(jid_o.has_value());
             self.jid = *std::move(jid_o);
             break;
         }
         if(config::debug_xmpp_connection) {
-            PRINT("jid: ", self.jid.as_full());
+            line_print("jid: ", self.jid.as_full());
         }
     }
     // disco
@@ -111,13 +110,13 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
         co_yield true;
 
         while(true) {
-            const auto response = xml::parse(self.worker_arg).as_value();
+            const auto response = xml::parse(self.worker_arg).value();
             if(response.name != "iq") {
                 co_yield false;
                 continue;
             }
-            DYN_ASSERT(response.is_attr_equal("id", id), "unexpected iq");
-            DYN_ASSERT(response.is_attr_equal("type", "result"), "unexpected iq");
+            dynamic_assert(response.is_attr_equal("id", id), "unexpected iq");
+            dynamic_assert(response.is_attr_equal("type", "result"), "unexpected iq");
             // TODO: parse disco
             break;
         }
@@ -139,16 +138,16 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
         co_yield true;
 
         while(true) {
-            const auto response = xml::parse(self.worker_arg).as_value();
+            const auto response = xml::parse(self.worker_arg).value();
             if(response.name != "iq") {
                 co_yield false;
                 continue;
             }
-            DYN_ASSERT(response.is_attr_equal("id", id), "unexpected iq");
-            DYN_ASSERT(response.is_attr_equal("type", "result"), "unexpected iq");
+            dynamic_assert(response.is_attr_equal("id", id), "unexpected iq");
+            dynamic_assert(response.is_attr_equal("type", "result"), "unexpected iq");
             const auto services = response.find_first_child("services");
-            DYN_ASSERT(services != nullptr);
-            DYN_ASSERT(services->is_attr_equal("xmlns", xmpp::ns::xmpp_extdisco));
+            dynamic_assert(services != nullptr);
+            dynamic_assert(services->is_attr_equal("xmlns", xmpp::ns::xmpp_extdisco));
             if(auto sv_o = parse_services(*services); sv_o) {
                 self.external_services = std::move(*sv_o);
             }

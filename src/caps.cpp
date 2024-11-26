@@ -1,4 +1,3 @@
-#include "macros/assert.hpp"
 #include "util/assert.hpp"
 #include "xmpp/elements.hpp"
 
@@ -7,13 +6,13 @@ auto compute_disco_str(const xml::Node& disco) -> std::string {
 
     {
         const auto identity = disco.find_first_child(xmpp::elm::identity.name);
-        DYN_ASSERT(identity != nullptr);
+        dynamic_assert(identity != nullptr);
 
         auto category = std::string_view();
         auto type     = std::string_view();
         auto lang     = std::string_view();
         auto name     = std::string_view();
-        DYN_ASSERT(identity->get_attrs({
+        dynamic_assert(identity->get_attrs({
             {"category", category},
             {"type", type},
             {"xml:lang", lang},

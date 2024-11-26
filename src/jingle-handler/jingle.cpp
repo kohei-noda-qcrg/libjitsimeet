@@ -7,8 +7,6 @@
 #include "../random.hpp"
 #include "../sha.hpp"
 #include "../util/charconv.hpp"
-#include "../util/error.hpp"
-#include "../util/result.hpp"
 #include "cert.hpp"
 #include "jingle.hpp"
 #include "pem.hpp"
@@ -39,12 +37,12 @@ struct DescriptionParseResult {
     int audio_hdrext_ssrc_audio_level = -1;
 };
 
-auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, SSRCMap& ssrc_map) -> Result<DescriptionParseResult, StringError> {
+auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, SSRCMap& ssrc_map) -> std::optional<DescriptionParseResult> {
     auto source_type = SourceType();
     if(const auto e = source_type_str.find(desc.media); e != nullptr) {
         source_type = e->first;
     } else {
-        return StringError("unknown media");
+        bail("unknown media");
     }
 
     auto r = DescriptionParseResult{};
@@ -63,7 +61,7 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
             };
             r.codecs.push_back(codec);
         } else {
-            WARN("unknown codec ", pt.name);
+            line_warn("unknown codec ", pt.name);
         }
     }
     // parse retransmission payload types
@@ -77,7 +75,7 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
             }
             const auto apt = from_chars<int>(p.value);
             if(!apt) {
-                WARN("invalid apt ", p.value);
+                line_warn("invalid apt ", p.value);
                 continue;
             }
             for(auto& codec : r.codecs) {
@@ -103,7 +101,7 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
                 break;
             }
         } else {
-            WARN("unsupported rtp header extension ", ext.uri);
+            line_warn("unsupported rtp header extension ", ext.uri);
         }
     }
     // parse ssrc
@@ -173,7 +171,7 @@ auto JingleHandler::build_accept_jingle() const -> std::optional<jingle::Jingle>
             .support_mux = true,
         };
         // append payload type
-        unwrap_po(codec, session.find_codec_by_type(codec_type));
+        unwrap(codec, session.find_codec_by_type(codec_type));
         rtp_desc.payload_types.push_back(jingle::Jingle::Content::RTPDescription::PayloadType{
             .id        = codec.tx_pt,
             .clockrate = is_audio ? 48000 : 90000,
@@ -246,9 +244,9 @@ auto JingleHandler::build_accept_jingle() const -> std::optional<jingle::Jingle>
         // add candidates
         const auto local_candidates = ice::get_local_candidates(session.ice_agent);
         for(const auto lc : local_candidates.candidates) {
-            unwrap_oo(type, ice::candidate_type_from_nice(lc->type));
+            unwrap(type, ice::candidate_type_from_nice(lc->type));
             const auto addr = ice::sockaddr_to_str(lc->addr);
-            assert_o(!addr.empty());
+            ensure(!addr.empty());
             const auto  port                = ice::sockaddr_to_port(lc->addr);
             static auto candidate_id_serial = std::atomic_int(0);
             transport.candidates.push_back(jingle::Jingle::Content::IceUdpTransport::Candidate{
@@ -296,7 +294,7 @@ auto JingleHandler::on_initiate(jingle::Jingle jingle) -> bool {
     auto transport                     = (const jingle::Jingle::Content::IceUdpTransport*)(nullptr);
     for(const auto& c : jingle.contents) {
         for(const auto& d : c.descriptions) {
-            unwrap_re(desc, parse_rtp_description(d, ssrc_map));
+            unwrap(desc, parse_rtp_description(d, ssrc_map));
             codecs.insert(codecs.end(), desc.codecs.begin(), desc.codecs.end());
             replace_default(video_hdrext_transport_cc, desc.video_hdrext_transport_cc);
             replace_default(audio_hdrext_transport_cc, desc.audio_hdrext_transport_cc);
@@ -308,27 +306,27 @@ auto JingleHandler::on_initiate(jingle::Jingle jingle) -> bool {
     }
 
     const auto cert = cert::AutoCert(cert::cert_new());
-    assert_b(cert);
+    ensure(cert);
     const auto cert_der = cert::serialize_cert_der(cert.get());
-    assert_b(cert_der);
+    ensure(cert_der);
     const auto priv_key_der = cert::serialize_private_key_pkcs8_der(cert.get());
-    assert_b(priv_key_der);
+    ensure(priv_key_der);
     const auto fingerprint     = sha::calc_sha256(*cert_der);
     auto       fingerprint_str = digest_str(fingerprint);
     auto       cert_pem        = pem::encode("CERTIFICATE", *cert_der);
     auto       priv_key_pem    = pem::encode("PRIVATE KEY", *priv_key_der);
     if(config::debug_jingle_handler) {
-        PRINT(fingerprint_str.data());
-        PRINT(cert_pem.data());
-        PRINT(priv_key_pem.data());
+        line_print(fingerprint_str.data());
+        line_print(cert_pem.data());
+        line_print(priv_key_pem.data());
     }
 
     const auto audio_ssrc     = rng::generate_random_uint32();
     const auto video_ssrc     = rng::generate_random_uint32();
     const auto video_rtx_ssrc = rng::generate_random_uint32();
 
-    unwrap_ob_mut(ice_agent, ice::setup(external_services, transport));
-    unwrap_ob_mut(local_cred, ice::get_local_credentials(ice_agent));
+    unwrap_mut(ice_agent, ice::setup(external_services, transport));
+    unwrap_mut(local_cred, ice::get_local_credentials(ice_agent));
 
     session = JingleSession{
         .initiate_jingle               = std::move(jingle),
@@ -349,7 +347,7 @@ auto JingleHandler::on_initiate(jingle::Jingle jingle) -> bool {
 
     // session initiation half-done
     // wakeup mainthread to create pipeline
-    sync->wakeup();
+    sync->notify();
 
     return true;
 }
@@ -363,7 +361,7 @@ auto JingleHandler::on_add_source(jingle::Jingle jingle) -> bool {
             } else if(desc.media == "video") {
                 type = SourceType::Video;
             } else {
-                WARN("unknown media ", desc.media);
+                line_warn("unknown media ", desc.media);
                 continue;
             }
             for(const auto& src : desc.sources) {
