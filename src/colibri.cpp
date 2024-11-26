@@ -18,11 +18,10 @@ auto find_transport(const jingle::Jingle& jingle) -> const jingle::Jingle::Conte
 
 auto Colibri::set_last_n(const int n) -> void {
     const auto payload = build_string(R"({"colibriClass":"ReceiverVideoConstraints","lastN":)", n, "}");
-    ws::send_str(ws_conn, payload);
+    ensure(ws_context.send(payload));
 }
 
 Colibri::~Colibri() {
-    ws::free_connection(ws_conn);
 }
 
 auto Colibri::connect(const jingle::Jingle& initiate_jingle, const bool secure) -> std::unique_ptr<Colibri> {
@@ -31,7 +30,17 @@ auto Colibri::connect(const jingle::Jingle& initiate_jingle, const bool secure) 
     if(config::debug_colibri) {
         line_print("connecting to colibri at ", transport.websocket);
     }
-    unwrap_mut(conn, ws::create_connection(std::string(ws_uri.domain).data(), ws_uri.port, std::string(ws_uri.path).data(), secure));
-    return std::unique_ptr<Colibri>(new Colibri{.ws_conn = &conn});
+
+    const auto uri_domain = std::string(ws_uri.domain);
+    const auto uri_path   = std::string(ws_uri.path);
+    auto       obj        = std::unique_ptr<Colibri>(new Colibri());
+    ensure(obj->ws_context.init({
+        .address   = uri_domain.data(),
+        .path      = uri_path.data(),
+        .protocol  = "xmpp",
+        .port      = ws_uri.port,
+        .ssl_level = secure ? ws::client::SSLLevel::Enable : ws::client::SSLLevel::TrustSelfSigned,
+    }));
+    return obj;
 }
 } // namespace colibri

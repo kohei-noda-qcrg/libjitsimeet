@@ -2,6 +2,8 @@
 #include <span>
 #include <unordered_map>
 
+#include <coop/single-event.hpp>
+
 #include "../codec-type.hpp"
 #include "../util/event.hpp"
 #include "../xmpp/extdisco.hpp"
@@ -56,7 +58,7 @@ struct JingleSession {
 
 class JingleHandler {
   private:
-    Event*                         sync;
+    coop::SingleEvent*             sync;
     CodecType                      audio_codec_type;
     CodecType                      video_codec_type;
     xmpp::Jid                      jid;
@@ -73,5 +75,5 @@ class JingleHandler {
                   CodecType                      video_codec_type,
                   xmpp::Jid                      jid,
                   std::span<const xmpp::Service> external_services,
-                  Event*                         sync);
+                  coop::SingleEvent*             sync);
 };

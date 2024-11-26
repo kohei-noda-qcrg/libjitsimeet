@@ -1,10 +1,10 @@
 #pragma once
 #include "jingle/jingle.hpp"
-#include "websocket.hpp"
+#include "ws/client.hpp"
 
 namespace colibri {
 struct Colibri {
-    ws::Connection* ws_conn;
+    ws::client::Context ws_context;
 
     auto set_last_n(int n) -> void;
 

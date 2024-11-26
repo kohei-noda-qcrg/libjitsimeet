@@ -380,7 +380,7 @@ JingleHandler::JingleHandler(const CodecType                audio_codec_type,
                              const CodecType                video_codec_type,
                              xmpp::Jid                      jid,
                              std::span<const xmpp::Service> external_services,
-                             Event* const                   sync)
+                             coop::SingleEvent* const       sync)
     : sync(sync),
       audio_codec_type(audio_codec_type),
       video_codec_type(video_codec_type),

@@ -10,3 +10,6 @@
 [submodule "submodules/tinyjson"]
 	path = submodules/tinyjson
 	url = https://github.com/mojyack/tinyjson.git
+[submodule "submodules/websocket-cpp"]
+	path = submodules/websocket-cpp
+	url = https://github.com/mojyack/websocket-cpp.git

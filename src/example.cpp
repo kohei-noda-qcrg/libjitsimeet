@@ -1,28 +1,39 @@
+#include <coop/blocker.hpp>
+#include <coop/generator.hpp>
+#include <coop/parallel.hpp>
+#include <coop/promise.hpp>
+#include <coop/single-event.hpp>
+#include <coop/task-injector.hpp>
+#include <coop/thread.hpp>
+#include <coop/timer.hpp>
+
+#include "async-websocket.hpp"
 #include "colibri.hpp"
 #include "conference.hpp"
 #include "jingle-handler/jingle.hpp"
 #include "macros/assert.hpp"
+#include "util/argument-parser.hpp"
 #include "util/assert.hpp"
-#include "util/event.hpp"
 #include "util/print.hpp"
-#include "websocket.hpp"
+#include "util/span.hpp"
 #include "xmpp/elements.hpp"
 #include "xmpp/negotiator.hpp"
 
+namespace {
 struct XMPPNegotiatorCallbacks : public xmpp::NegotiatorCallbacks {
-    ws::Connection* ws_conn;
+    ws::client::Context* ws_context;
 
     virtual auto send_payload(std::string_view payload) -> void override {
-        ws::send_str(ws_conn, payload);
+        ensure(ws_context->send(payload));
     }
 };
 
 struct ConferenceCallbacks : public conference::ConferenceCallbacks {
-    ws::Connection* ws_conn;
-    JingleHandler*  jingle_handler;
+    ws::client::Context* ws_context;
+    JingleHandler*       jingle_handler;
 
     virtual auto send_payload(std::string_view payload) -> void override {
-        ws::send_str(ws_conn, payload);
+        ensure(ws_context->send(payload));
     }
 
     virtual auto on_jingle_initiate(jingle::Jingle jingle) -> bool override {
@@ -46,63 +57,65 @@ struct ConferenceCallbacks : public conference::ConferenceCallbacks {
     }
 };
 
-struct Args {
+auto process_until_finish(ws::client::Context& ws_context) -> coop::Async<void> {
+    while(ws_context.state == ws::client::State::Connected) {
+        co_await coop::run_blocking([&ws_context]() { ws_context.process(); });
+    }
+}
+
+auto async_main(const int argc, const char* const argv[]) -> coop::Async<int> {
+    constexpr auto error_value = -1;
+
     const char* host   = nullptr;
     const char* room   = nullptr;
-    bool        secure = true;
-
-    static auto parse(const int argc, const char* const argv[]) -> Args {
-        auto args = Args();
-        for(auto i = 1; i < argc; i += 1) {
-            const auto arg = std::string_view(argv[i]);
-            if(arg == "-s") {
-                args.secure = false;
-            } else {
-                if(args.host == nullptr) {
-                    args.host = argv[i];
-                } else if(args.room == nullptr) {
-                    args.room = argv[i];
-                } else {
-                    warn("too many arguments");
-                    exit(1);
-                }
-            }
+    auto        secure = true;
+    {
+        auto help   = false;
+        auto parser = args::Parser<>();
+        parser.arg(&host, "HOST", "server domain");
+        parser.arg(&room, "ROOM", "room name");
+        parser.kwflag(&secure, {"-s"}, "allow self-signed ssl certificate", {.invert_flag_value = true});
+        parser.kwflag(&help, {"-h", "--help"}, "print this help message", {.no_error_check = true});
+        if(!parser.parse(argc, argv) || help) {
+            print("usage: example ", parser.get_help());
+            co_return 0;
         }
-        return args;
     }
-};
 
-auto main(const int argc, const char* const argv[]) -> int {
-    if(argc < 3) {
-        print("usage: example [-s] HOST ROOM");
-        print("    -s: allow self-signed cert");
-        return 1;
-    }
-    const auto args    = Args::parse(argc, argv);
-    const auto ws_path = std::string("xmpp-websocket?room=") + args.room;
-    const auto ws_conn = ws::create_connection(args.host, 443, ws_path.data(), args.secure);
+    auto injector   = coop::TaskInjector(*co_await coop::reveal_runner());
+    auto ws_context = ws::client::AsyncContext();
+    co_ensure_v(ws_context.init(
+        injector,
+        {
+            .address   = host,
+            .path      = build_string("xmpp-websocket?room=", room).data(),
+            .protocol  = "xmpp",
+            .port      = 443,
+            .ssl_level = secure ? ws::client::SSLLevel::Enable : ws::client::SSLLevel::TrustSelfSigned,
+        }));
 
-    auto event  = Event();
+    auto ws_task = coop::TaskHandle();
+    co_await coop::run_args(process_until_finish(ws_context)).detach({&ws_task});
+
+    auto event  = coop::SingleEvent();
     auto jid    = xmpp::Jid();
     auto ext_sv = std::vector<xmpp::Service>();
 
     // gain jid from server
     {
         auto callbacks        = XMPPNegotiatorCallbacks();
-        callbacks.ws_conn     = ws_conn;
-        const auto negotiator = xmpp::Negotiator::create(args.host, &callbacks);
-        ws::add_receiver(ws_conn, [&negotiator, &event](const std::span<std::byte> data) -> ws::ReceiverResult {
-            const auto payload = std::string_view(std::bit_cast<char*>(data.data()), data.size());
-            const auto done    = negotiator->feed_payload(payload);
+        callbacks.ws_context  = &ws_context;
+        const auto negotiator = xmpp::Negotiator::create(host, &callbacks);
+
+        ws_context.handler = [&negotiator, &event](const std::span<const std::byte> data) -> coop::Async<void> {
+            const auto done = negotiator->feed_payload(from_span(data));
             if(done) {
                 event.notify();
-                return ws::ReceiverResult::Complete;
-            } else {
-                return ws::ReceiverResult::Handled;
             }
-        });
+            co_return;
+        };
         negotiator->start_negotiation();
-        event.wait();
+        co_await event;
 
         jid    = std::move(negotiator->jid);
         ext_sv = std::move(negotiator->external_services);
@@ -115,25 +128,25 @@ auto main(const int argc, const char* const argv[]) -> int {
 
         auto jingle_handler      = JingleHandler(audio_codec_type, video_codec_type, jid, ext_sv, &event);
         auto callbacks           = ConferenceCallbacks();
-        callbacks.ws_conn        = ws_conn;
+        callbacks.ws_context     = &ws_context;
         callbacks.jingle_handler = &jingle_handler;
         const auto conference    = conference::Conference::create(
             conference::Config{
                    .jid              = jid,
-                   .room             = args.room,
+                   .room             = room,
                    .nick             = "libjitsimeet-example",
                    .video_codec_type = video_codec_type,
                    .audio_muted      = false,
                    .video_muted      = false,
             },
             &callbacks);
-        ws::add_receiver(ws_conn, [&conference](const std::span<std::byte> data) -> ws::ReceiverResult {
-            // feed_payload always returns true in current implementation
-            conference->feed_payload(std::string_view((char*)data.data(), data.size()));
-            return ws::ReceiverResult::Handled;
-        });
+        ws_context.handler = [&conference](const std::span<const std::byte> data) -> coop::Async<void> {
+            print(from_span(data));
+            conference->feed_payload(from_span(data));
+            co_return;
+        };
         conference->start_negotiation();
-        event.wait();
+        co_await event;
         {
             auto accept    = jingle_handler.build_accept_jingle().value();
             auto accept_iq = xmpp::elm::iq.clone()
@@ -151,7 +164,7 @@ auto main(const int argc, const char* const argv[]) -> int {
             });
         }
 
-        auto colibri = colibri::Colibri::connect(jingle_handler.get_session().initiate_jingle, args.secure);
+        auto colibri = colibri::Colibri::connect(jingle_handler.get_session().initiate_jingle, secure);
         colibri->set_last_n(5);
 
         while(true) {
@@ -163,9 +176,16 @@ auto main(const int argc, const char* const argv[]) -> int {
                                     xmpp::elm::ping,
                                 });
             conference->send_iq(iq, {});
-            std::this_thread::sleep_for(std::chrono::seconds(10));
+            co_await coop::sleep(std::chrono::seconds(10));
         }
     }
+    ws_task.cancel();
+}
+} // namespace
 
+auto main(const int argc, const char* const argv[]) -> int {
+    auto runner = coop::Runner();
+    runner.push_task(async_main(argc, argv));
+    runner.run();
     return 0;
 }
