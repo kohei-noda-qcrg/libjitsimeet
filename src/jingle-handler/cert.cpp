@@ -4,6 +4,7 @@
 #include <openssl/evp.h>
 #include <openssl/x509.h>
 
+#include "../macros/assert.hpp"
 #include "../macros/autoptr.hpp"
 
 namespace cert {
@@ -22,70 +23,46 @@ struct Cert {
 
 namespace {
 auto generate_pkey() -> AutoPKey {
-    const auto ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_EC, NULL);
-    if(ctx == NULL) {
-        return nullptr;
-    }
-    const auto ctx_a = AutoPKeyCtx(ctx);
-    if(EVP_PKEY_keygen_init(ctx) != 1) {
-        return nullptr;
-    }
-    if(EVP_PKEY_CTX_set_ec_paramgen_curve_nid(ctx, NID_X9_62_prime256v1) != 1) {
-        return nullptr;
-    }
+    const auto ctx = AutoPKeyCtx(EVP_PKEY_CTX_new_id(EVP_PKEY_EC, NULL));
+    ensure(ctx != NULL);
+    ensure(EVP_PKEY_keygen_init(ctx.get()) == 1);
+    ensure(EVP_PKEY_CTX_set_ec_paramgen_curve_nid(ctx.get(), NID_X9_62_prime256v1) == 1);
     auto pkey = (EVP_PKEY*)(nullptr);
-    if(EVP_PKEY_keygen(ctx, &pkey) != 1) {
-        return nullptr;
-    }
-
+    ensure(EVP_PKEY_keygen(ctx.get(), &pkey) == 1);
     return AutoPKey(pkey);
 }
 
 auto generate_x509(EVP_PKEY* const pkey) -> AutoX509 {
-    auto x = X509_new();
-    if(x == NULL) {
-        return nullptr;
-    }
-    auto x_a = AutoX509(x);
+    auto x = AutoX509(X509_new());
+    ensure(x != NULL);
+    ASN1_INTEGER_set(X509_get_serialNumber(x.get()), 1);
+    X509_gmtime_adj(X509_get_notBefore(x.get()), 0);
+    X509_gmtime_adj(X509_get_notAfter(x.get()), 365 * 24 * 60 * 60);
+    X509_set_pubkey(x.get(), pkey);
 
-    ASN1_INTEGER_set(X509_get_serialNumber(x), 1);
-    X509_gmtime_adj(X509_get_notBefore(x), 0);
-    X509_gmtime_adj(X509_get_notAfter(x), 365 * 24 * 60 * 60);
-    X509_set_pubkey(x, pkey);
-
-    const auto name = X509_get_subject_name(x);
+    const auto name = X509_get_subject_name(x.get());
     X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (unsigned char*)"JP", -1, -1, 0);
     X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (unsigned char*)"gstjitsimeet", -1, -1, 0);
-    X509_set_issuer_name(x, name);
-    if(!X509_sign(x, pkey, EVP_sha256())) {
-        return nullptr;
-    }
-    return x_a;
+    X509_set_issuer_name(x.get(), name);
+    ensure(X509_sign(x.get(), pkey, EVP_sha256()));
+    return x;
 }
 
 auto serialize_der(const auto i2d, const auto ptr) -> std::optional<std::vector<std::byte>> {
     const auto len = i2d(ptr, NULL);
-    if(len <= 0) {
-        return std::nullopt;
-    }
+    ensure(len > 0);
     auto buf     = std::vector<std::byte>(len);
     auto buf_ptr = std::bit_cast<unsigned char*>(buf.data());
-    if(i2d(ptr, &buf_ptr) != len) {
-        return std::nullopt;
-    }
+    ensure(i2d(ptr, &buf_ptr) == len);
     return buf;
 }
 } // namespace
 
 auto cert_new() -> Cert* {
     auto pkey = generate_pkey();
-    if(!pkey) {
-        return nullptr;
-    }
+    ensure(pkey);
     auto x = generate_x509(pkey.get());
-    if(!x) {
-        return nullptr;
-    }
+    ensure(x);
     return new Cert{std::move(pkey), std::move(x)};
 }
 
