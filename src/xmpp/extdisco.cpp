@@ -1,17 +1,10 @@
 #include "extdisco.hpp"
-#include "../util/assert.hpp"
+#include "../macros/unwrap.hpp"
 #include "../util/charconv.hpp"
 #include "../xml/xml.hpp"
 
 namespace xmpp {
 namespace {
-#define num_or_nullopt(field, value)                           \
-    if(const auto v = from_chars<decltype(field)>(value); v) { \
-        field = *v;                                            \
-    } else {                                                   \
-        return std::nullopt;                                   \
-    }
-
 auto parse_service(const xml::Node& node) -> std::optional<Service> {
     auto r          = Service{};
     auto found_type = false;
@@ -33,7 +26,8 @@ auto parse_service(const xml::Node& node) -> std::optional<Service> {
         } else if(a.key == "password") {
             r.password = a.value;
         } else if(a.key == "port") {
-            num_or_nullopt(r.port, a.value);
+            unwrap(num, from_chars<uint16_t>(a.value));
+            r.port = num;
         } else if(a.key == "restricted") {
             // TODO: should be a.value.tolower() == "parse"
             if(a.value == "1" || a.value == "parse") {
@@ -41,16 +35,14 @@ auto parse_service(const xml::Node& node) -> std::optional<Service> {
             } else if(a.value == "0") {
                 r.restricted = false;
             } else {
-                line_warn("unknown restricted");
-                return std::nullopt;
+                bail("unknown restricted");
             }
         } else {
             line_warn("unhandled attribute ", a.key);
         }
     }
     if(!found_type || !found_host) {
-        line_warn("required attributes not found");
-        return std::nullopt;
+        bail("required attributes not found");
     }
     for(const auto& c : node.children) {
         if(0) {
