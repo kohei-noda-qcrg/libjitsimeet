@@ -1,4 +1,5 @@
 #pragma once
+#include <coop/generator.hpp>
 #include <coop/task-injector.hpp>
 
 #include "ws/client.hpp"
@@ -10,5 +11,6 @@ struct AsyncContext : Context {
     std::function<OnDataReceivedAsync> handler;
 
     auto init(coop::TaskInjector& injector, const ContextParams& params) -> bool;
+    auto process_until_finish() -> coop::Async<void>;
 };
 } // namespace ws::client

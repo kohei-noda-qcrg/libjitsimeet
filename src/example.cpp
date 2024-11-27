@@ -4,7 +4,6 @@
 #include <coop/promise.hpp>
 #include <coop/single-event.hpp>
 #include <coop/task-injector.hpp>
-#include <coop/thread.hpp>
 #include <coop/timer.hpp>
 
 #include "async-websocket.hpp"
@@ -57,12 +56,6 @@ struct ConferenceCallbacks : public conference::ConferenceCallbacks {
     }
 };
 
-auto process_until_finish(ws::client::Context& ws_context) -> coop::Async<void> {
-    while(ws_context.state == ws::client::State::Connected) {
-        co_await coop::run_blocking([&ws_context]() { ws_context.process(); });
-    }
-}
-
 auto async_main(const int argc, const char* const argv[]) -> coop::Async<int> {
     constexpr auto error_value = -1;
 
@@ -95,7 +88,7 @@ auto async_main(const int argc, const char* const argv[]) -> coop::Async<int> {
         }));
 
     auto ws_task = coop::TaskHandle();
-    co_await coop::run_args(process_until_finish(ws_context)).detach({&ws_task});
+    co_await coop::run_args(ws_context.process_until_finish()).detach({&ws_task});
 
     auto event  = coop::SingleEvent();
     auto jid    = xmpp::Jid();
@@ -141,7 +134,6 @@ auto async_main(const int argc, const char* const argv[]) -> coop::Async<int> {
             },
             &callbacks);
         ws_context.handler = [&conference](const std::span<const std::byte> data) -> coop::Async<void> {
-            print(from_span(data));
             conference->feed_payload(from_span(data));
             co_return;
         };
