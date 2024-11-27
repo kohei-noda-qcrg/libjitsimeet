@@ -1,4 +1,5 @@
 #include "jid.hpp"
+#include "../macros/assert.hpp"
 
 namespace xmpp {
 auto Jid::as_bare() const -> std::string {
@@ -15,9 +16,7 @@ auto Jid::operator==(const Jid& o) const -> bool {
 
 auto Jid::parse(std::string_view str) -> std::optional<Jid> {
     const auto at = str.find('@');
-    if(at == str.npos) {
-        return std::nullopt;
-    }
+    ensure(at != str.npos);
     const auto node = str.substr(0, at);
     const auto sl   = str.find('/');
     if(sl == str.npos) {
