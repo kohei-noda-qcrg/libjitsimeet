@@ -1,5 +1,4 @@
 #include "conference.hpp"
-#include "array-util.hpp"
 #include "base64.hpp"
 #include "caps.hpp"
 #include "config.hpp"
@@ -7,6 +6,7 @@
 #include "macros/unwrap.hpp"
 #include "random.hpp"
 #include "sha.hpp"
+#include "util/pair-table.hpp"
 #include "util/split.hpp"
 #include "xmpp/elements.hpp"
 #include "json/json.hpp"
@@ -100,7 +100,7 @@ const auto     disco_info = xmpp::elm::query.clone()
                                     }),
                             });
 
-const auto codec_type_str = make_str_table<CodecType>({
+const auto codec_type_str = make_pair_table<CodecType, std::string_view>({
     // {CodecType::Opus, "opus"},
     {CodecType::H264, "h264"},
     {CodecType::Vp8, "vp8"},
@@ -402,7 +402,7 @@ auto handle_received(Conference* const conf) -> Conference::Worker::Generator {
                     },
                     xml::Node{
                         .name = "jitsi_participant_codecType",
-                        .data = codec_type->second,
+                        .data = codec_type->data(),
                     },
                     xml::Node{
                         .name = "videomuted",

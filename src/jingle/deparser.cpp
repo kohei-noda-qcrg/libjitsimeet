@@ -9,7 +9,7 @@ auto deparse_group(const Jingle::Group& group) -> xml::Node {
     }
                     .append_attrs({
                         {"xmlns", ns::grouping},
-                        {"semantics", group_semantics_str.find(group.semantics)->second},
+                        {"semantics", std::string(*group_semantics_str.find(group.semantics))},
                     });
     for(const auto& content : group.contents) {
         node.append_children({
@@ -115,7 +115,7 @@ auto deparse_ssrc_group(const Jingle::Content::RTPDescription::SSRCGroup& ssrc_g
     }
                     .append_attrs({
                         {"xmlns", ns::rtp_ssma},
-                        {"semantics", ssrc_group_semantics_str.find(ssrc_group.semantics)->second},
+                        {"semantics", std::string(*ssrc_group_semantics_str.find(ssrc_group.semantics))},
                     });
     for(const auto ssrc : ssrc_group.ssrcs) {
         node.append_children({
@@ -185,7 +185,7 @@ auto deparse_candidate(const Jingle::Content::IceUdpTransport::Candidate& candid
                         {"port", std::to_string(candidate.port)},
                         {"priority", std::to_string(candidate.priority)},
                         {"protocol", "udp"},
-                        {"type", candidate_type_str.find(candidate.type)->second},
+                        {"type", std::string(*candidate_type_str.find(candidate.type))},
                     });
     return node;
 }
@@ -223,7 +223,7 @@ auto deparse_content(const Jingle::Content& content) -> xml::Node {
     }
                     .append_attrs({
                         {"name", content.name},
-                        {"senders", content_senders_str.find(content.senders)->second},
+                        {"senders", std::string(*content_senders_str.find(content.senders))},
                         {"creator", content.is_from_initiator ? "initiator" : "responder"},
                     });
     for(const auto& desc : content.descriptions) {
@@ -242,7 +242,7 @@ auto deparse(const Jingle& jingle) -> xml::Node {
     }
                     .append_attrs({
                         {"xmlns", ns::jingle},
-                        {"action", action_str.find(jingle.action)->second},
+                        {"action", std::string(*action_str.find(jingle.action))},
                         {"sid", jingle.sid},
                     });
     if(!jingle.initiator.empty()) {

@@ -5,7 +5,6 @@
 #include <coop/single-event.hpp>
 
 #include "../codec-type.hpp"
-#include "../util/event.hpp"
 #include "../xmpp/extdisco.hpp"
 #include "../xmpp/jid.hpp"
 #include "ice.hpp"

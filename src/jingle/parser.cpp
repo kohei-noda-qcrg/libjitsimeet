@@ -1,4 +1,3 @@
-#include "../array-util.hpp"
 #include "../macros/assert.hpp"
 #include "../util/assert.hpp"
 #include "../util/charconv.hpp"
@@ -46,7 +45,7 @@ auto parse_template(const xml::Node& node) -> std::optional<T> {
 
 #define search_str_array_or_null(arr, field, value)    \
     if(const auto e = arr.find(value); e != nullptr) { \
-        field = e->first;                              \
+        field = *e;                                    \
     } else {                                           \
         line_warn("unknown enum ", value);             \
         return std::nullopt;                           \
@@ -343,7 +342,7 @@ auto parse_candidate(const xml::Node& node) -> std::optional<Jingle::Content::Ic
             found_priority = true;
         } else if(a.key == "type") {
             if(const auto e = candidate_type_str.find(a.value); e != nullptr) {
-                r.type = e->first;
+                r.type = *e;
             } else {
                 return std::nullopt;
             }

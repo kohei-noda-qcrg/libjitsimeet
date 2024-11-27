@@ -1,12 +1,12 @@
 #include <iomanip>
 
-#include "../array-util.hpp"
 #include "../config.hpp"
 #include "../jingle/jingle.hpp"
 #include "../macros/unwrap.hpp"
 #include "../random.hpp"
 #include "../sha.hpp"
 #include "../util/charconv.hpp"
+#include "../util/pair-table.hpp"
 #include "cert.hpp"
 #include "jingle.hpp"
 #include "pem.hpp"
@@ -17,12 +17,12 @@ auto replace_default(T& num, const T val) -> void {
     num = num == -1 ? val : num;
 }
 
-const auto source_type_str = make_str_table<SourceType>({
+const auto source_type_str = make_pair_table<SourceType, std::string_view>({
     {SourceType::Audio, "audio"},
     {SourceType::Video, "video"},
 });
 
-const auto codec_type_str = make_str_table<CodecType>({
+const auto codec_type_str = make_pair_table<CodecType, std::string_view>({
     {CodecType::Opus, "opus"},
     {CodecType::H264, "H264"},
     {CodecType::Vp8, "VP8"},
@@ -40,7 +40,7 @@ struct DescriptionParseResult {
 auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, SSRCMap& ssrc_map) -> std::optional<DescriptionParseResult> {
     auto source_type = SourceType();
     if(const auto e = source_type_str.find(desc.media); e != nullptr) {
-        source_type = e->first;
+        source_type = *e;
     } else {
         bail("unknown media");
     }
@@ -54,7 +54,7 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
         }
         if(const auto e = codec_type_str.find(pt.name); e != nullptr) {
             auto codec = Codec{
-                .type     = e->first,
+                .type     = *e,
                 .tx_pt    = pt.id,
                 .rtx_pt   = -1,
                 .rtcp_fbs = pt.rtcp_fbs,
@@ -176,7 +176,7 @@ auto JingleHandler::build_accept_jingle() const -> std::optional<jingle::Jingle>
             .id        = codec.tx_pt,
             .clockrate = is_audio ? 48000 : 90000,
             .channels  = is_audio ? 2 : -1,
-            .name      = codec_type_str.find(codec_type)->second,
+            .name      = std::string(*codec_type_str.find(codec_type)),
             .rtcp_fbs  = codec.rtcp_fbs,
         });
         if(codec.rtx_pt != -1) {

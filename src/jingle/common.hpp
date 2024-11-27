@@ -1,5 +1,5 @@
 #pragma once
-#include "../array-util.hpp"
+#include "../util/pair-table.hpp"
 #include "jingle.hpp"
 
 namespace jingle {
@@ -17,7 +17,7 @@ constexpr auto jitsi_jitmeet     = "http://jitsi.org/jitmeet";
 constexpr auto jitsi_colibri     = "http://jitsi.org/protocol/colibri";
 } // namespace ns
 
-inline const auto action_str = make_str_table<Jingle::Action>({
+inline const auto action_str = make_pair_table<Jingle::Action, std::string_view>({
     {Jingle::Action::ContentAccept, "content-accept"},
     {Jingle::Action::ContentAdd, "content-add"},
     {Jingle::Action::ContentModify, "content-modify"},
@@ -37,7 +37,7 @@ inline const auto action_str = make_str_table<Jingle::Action>({
     {Jingle::Action::SourceRemove, "source-remove"},
 });
 
-inline const auto ssrc_group_semantics_str = make_str_table<Jingle::Content::RTPDescription::SSRCGroup::Semantics>({
+inline const auto ssrc_group_semantics_str = make_pair_table<Jingle::Content::RTPDescription::SSRCGroup::Semantics, std::string_view>({
     {Jingle::Content::RTPDescription::SSRCGroup::Semantics::Ls, "LS"},
     {Jingle::Content::RTPDescription::SSRCGroup::Semantics::Fid, "FID"},
     {Jingle::Content::RTPDescription::SSRCGroup::Semantics::Srf, "SRF"},
@@ -46,19 +46,19 @@ inline const auto ssrc_group_semantics_str = make_str_table<Jingle::Content::RTP
     {Jingle::Content::RTPDescription::SSRCGroup::Semantics::Ddp, "DDP"},
 });
 
-inline const auto group_semantics_str = make_str_table<Jingle::Group::Semantics>({
+inline const auto group_semantics_str = make_pair_table<Jingle::Group::Semantics, std::string_view>({
     {Jingle::Group::Semantics::LipSync, "LS"},
     {Jingle::Group::Semantics::Bundle, "BUNDLE"},
 });
 
-inline const auto candidate_type_str = make_str_table<Jingle::Content::IceUdpTransport::Candidate::Type>({
+inline const auto candidate_type_str = make_pair_table<Jingle::Content::IceUdpTransport::Candidate::Type, std::string_view>({
     {Jingle::Content::IceUdpTransport::Candidate::Type::Host, "host"},
     {Jingle::Content::IceUdpTransport::Candidate::Type::Prflx, "prflx"},
     {Jingle::Content::IceUdpTransport::Candidate::Type::Relay, "relay"},
     {Jingle::Content::IceUdpTransport::Candidate::Type::Srflx, "srflx"},
 });
 
-inline const auto content_senders_str = make_str_table<Jingle::Content::Senders>({
+inline const auto content_senders_str = make_pair_table<Jingle::Content::Senders, std::string_view>({
     {Jingle::Content::Senders::Both, "both"},
     {Jingle::Content::Senders::Initiator, "initiator"},
     {Jingle::Content::Senders::Responder, "responder"},
