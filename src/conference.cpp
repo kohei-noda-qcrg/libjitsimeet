@@ -502,7 +502,7 @@ auto Conference::create(Config config, ConferenceCallbacks* const callbacks) -> 
         .callbacks = callbacks,
     };
 
-    const auto disco_str      = compute_disco_str(disco_info);
+    unwrap(disco_str, compute_disco_str(disco_info));
     const auto disco_sha1     = crypto::sha::calc_sha1(to_span(disco_str));
     const auto disco_sha256   = crypto::sha::calc_sha256(to_span(disco_str));
     conf->disco_sha1_base64   = crypto::base64::encode(disco_sha1);
