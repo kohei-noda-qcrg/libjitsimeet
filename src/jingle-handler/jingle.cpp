@@ -38,13 +38,7 @@ struct DescriptionParseResult {
 };
 
 auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, SSRCMap& ssrc_map) -> std::optional<DescriptionParseResult> {
-    auto source_type = SourceType();
-    if(const auto e = source_type_str.find(desc.media); e != nullptr) {
-        source_type = *e;
-    } else {
-        bail("unknown media");
-    }
-
+    unwrap(source_type, source_type_str.find(desc.media), "unknown media ", desc.media);
     auto r = DescriptionParseResult{};
 
     // parse codecs
