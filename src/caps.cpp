@@ -1,5 +1,4 @@
 #include "macros/unwrap.hpp"
-#include "util/assert.hpp"
 #include "xmpp/elements.hpp"
 
 auto compute_disco_str(const xml::Node& disco) -> std::optional<std::string> {
@@ -11,7 +10,7 @@ auto compute_disco_str(const xml::Node& disco) -> std::optional<std::string> {
         auto type     = std::string_view();
         auto lang     = std::string_view();
         auto name     = std::string_view();
-        dynamic_assert(identity.get_attrs({
+        ensure(identity.get_attrs({
             {"category", category},
             {"type", type},
             {"xml:lang", lang},

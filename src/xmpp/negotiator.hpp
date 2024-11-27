@@ -14,8 +14,14 @@ struct NegotiatorCallbacks {
     virtual ~NegotiatorCallbacks(){};
 };
 
+enum class FeedResult {
+    Continue,
+    Error,
+    Done,
+};
+
 struct Negotiator {
-    using Worker = CoRoutine<bool>;
+    using Worker = CoRoutine<FeedResult>;
 
     // constant
     std::string          host;
@@ -32,7 +38,7 @@ struct Negotiator {
 
     auto generate_iq_id() -> std::string;
     auto start_negotiation() -> void;
-    auto feed_payload(std::string_view payload) -> bool;
+    auto feed_payload(std::string_view payload) -> FeedResult;
 
     static auto create(std::string host, NegotiatorCallbacks* callbacks) -> std::unique_ptr<Negotiator>;
 };

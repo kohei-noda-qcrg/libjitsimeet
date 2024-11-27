@@ -1,6 +1,6 @@
 #include "negotiator.hpp"
 #include "../config.hpp"
-#include "../util/assert.hpp"
+#include "../macros/unwrap.hpp"
 #include "../util/coroutine.hpp"
 #include "../xml/xml.hpp"
 #include "elements.hpp"
@@ -8,6 +8,8 @@
 namespace xmpp {
 namespace {
 auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
+    constexpr auto error_value = FeedResult::Error;
+
     if(config::debug_xmpp_connection) {
         line_print("negotiation started");
     }
@@ -18,36 +20,36 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
             {"to", self.host},
         });
         self.callbacks->send_payload(xml::deparse(open));
-        co_yield true;
+        co_yield FeedResult::Continue;
 
         while(true) {
             const auto response = xml::parse(self.worker_arg).value();
             if(response.name == "open" && response.is_attr_equal("from", self.host)) {
                 break;
             }
-            co_yield false;
+            co_yield FeedResult::Continue;
         }
     }
     // wait for stream
     {
-        co_yield true;
+        co_yield FeedResult::Continue;
 
         while(true) {
             const auto response = xml::parse(self.worker_arg).value();
             if(response.name == "stream:features") {
                 break;
             }
-            co_yield false;
+            co_yield FeedResult::Continue;
         }
     }
     // auth
     {
         const auto auth = xmpp::elm::auth;
         self.callbacks->send_payload(xml::deparse(auth));
-        co_yield true;
+        co_yield FeedResult::Continue;
 
         const auto response = xml::parse(self.worker_arg).value();
-        dynamic_assert(response.name == "success");
+        co_ensure_v(response.name == "success");
     }
     // open
     {
@@ -55,10 +57,10 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
             {"to", self.host},
         });
         self.callbacks->send_payload(xml::deparse(open));
-        co_yield true;
+        co_yield FeedResult::Continue;
 
         const auto response = xml::parse(self.worker_arg).value();
-        dynamic_assert(response.name == "open");
+        co_ensure_v(response.name == "open");
     }
     // bind
     {
@@ -72,20 +74,18 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
                                 xmpp::elm::bind,
                             });
         self.callbacks->send_payload(xml::deparse(iq));
-        co_yield true;
+        co_yield FeedResult::Continue;
 
         while(true) {
             const auto response = xml::parse(self.worker_arg).value();
             if(response.name != "iq") {
-                co_yield false;
+                co_yield FeedResult::Continue;
                 continue;
             }
-            dynamic_assert(response.is_attr_equal("id", id), "unexpected iq");
-            const auto jid_n = response.find_first_child("bind", "jid");
-            dynamic_assert(jid_n != nullptr, "jid not found in iq response");
-            auto jid_o = Jid::parse(jid_n->data);
-            dynamic_assert(jid_o.has_value());
-            self.jid = *std::move(jid_o);
+            co_ensure_v(response.is_attr_equal("id", id), "unexpected iq");
+            co_unwrap_v(jid_n, response.find_first_child("bind", "jid"), "jid not found in iq response");
+            co_unwrap_v_mut(jid, Jid::parse(jid_n.data));
+            self.jid = std::move(jid);
             break;
         }
         if(config::debug_xmpp_connection) {
@@ -107,16 +107,16 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
                                 xmpp::elm::query,
                             });
         self.callbacks->send_payload(xml::deparse(iq));
-        co_yield true;
+        co_yield FeedResult::Continue;
 
         while(true) {
             const auto response = xml::parse(self.worker_arg).value();
             if(response.name != "iq") {
-                co_yield false;
+                co_yield FeedResult::Continue;
                 continue;
             }
-            dynamic_assert(response.is_attr_equal("id", id), "unexpected iq");
-            dynamic_assert(response.is_attr_equal("type", "result"), "unexpected iq");
+            co_ensure_v(response.is_attr_equal("id", id), "unexpected iq");
+            co_ensure_v(response.is_attr_equal("type", "result"), "unexpected iq");
             // TODO: parse disco
             break;
         }
@@ -135,26 +135,25 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
                                 xmpp::elm::services,
                             });
         self.callbacks->send_payload(xml::deparse(iq));
-        co_yield true;
+        co_yield FeedResult::Continue;
 
         while(true) {
             const auto response = xml::parse(self.worker_arg).value();
             if(response.name != "iq") {
-                co_yield false;
+                co_yield FeedResult::Continue;
                 continue;
             }
-            dynamic_assert(response.is_attr_equal("id", id), "unexpected iq");
-            dynamic_assert(response.is_attr_equal("type", "result"), "unexpected iq");
-            const auto services = response.find_first_child("services");
-            dynamic_assert(services != nullptr);
-            dynamic_assert(services->is_attr_equal("xmlns", xmpp::ns::xmpp_extdisco));
-            if(auto sv_o = parse_services(*services); sv_o) {
+            co_ensure_v(response.is_attr_equal("id", id), "unexpected iq");
+            co_ensure_v(response.is_attr_equal("type", "result"), "unexpected iq");
+            co_unwrap_v(services, response.find_first_child("services"));
+            co_ensure_v(services.is_attr_equal("xmlns", xmpp::ns::xmpp_extdisco));
+            if(auto sv_o = parse_services(services); sv_o) {
                 self.external_services = std::move(*sv_o);
             }
             break;
         }
     }
-    co_return true;
+    co_return FeedResult::Done;
 }
 } // namespace
 
@@ -167,10 +166,9 @@ auto Negotiator::start_negotiation() -> void {
     worker.resume();
 }
 
-auto Negotiator::feed_payload(std::string_view payload) -> bool {
+auto Negotiator::feed_payload(std::string_view payload) -> FeedResult {
     worker_arg = payload;
-    worker.resume();
-    return worker.done();
+    return worker.resume();
 }
 
 auto Negotiator::create(std::string host, NegotiatorCallbacks* const callbacks) -> std::unique_ptr<Negotiator> {

@@ -130,15 +130,10 @@ auto handle_iq_get(Conference* const conf, const xml::Node& iq) -> bool {
     const auto node = query.find_attr("node");
     if(node.has_value()) {
         const auto sep = node->rfind("#");
-        if(sep == std::string::npos) {
-            return false;
-        }
+        ensure(sep != std::string::npos);
         const auto uri  = node->substr(0, sep);
         const auto hash = node->substr(sep + 1);
-        if(uri != disco_node || hash != conf->disco_sha1_base64) {
-            return false;
-        }
-
+        ensure(uri == disco_node && hash == conf->disco_sha1_base64);
         iqr.append_children({
             disco_info.clone()
                 .append_attrs({
@@ -158,14 +153,15 @@ auto handle_iq_set(Conference* const conf, const xml::Node& iq) -> bool {
     unwrap(from, iq.find_attr("from"));
     unwrap(from_jid, xmpp::Jid::parse(from));
     if(from_jid.resource != "focus") {
-        return false;
+        line_warn("ignoring iq from ", from_jid.resource);
+        return true;
     }
     unwrap(id, iq.find_attr("id"));
     unwrap(jingle_node, iq.find_first_child("jingle"));
     unwrap_mut(jingle, jingle::parse(jingle_node));
 
     if(config::debug_conference) {
-        line_assert("jingle action ", int(jingle.action));
+        line_warn("jingle action ", int(jingle.action));
     }
     switch(jingle.action) {
     case jingle::Jingle::Action::SessionInitiate:
@@ -219,8 +215,9 @@ auto handle_iq(Conference* const conf, const xml::Node& iq) -> bool {
         return handle_iq_result(conf, iq, true);
     } else if(type == "error") {
         return handle_iq_result(conf, iq, false);
+    } else {
+        bail("unknown iq type ", type);
     }
-    return false;
 }
 
 auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool {
@@ -281,9 +278,7 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
             }
             (payload.name == "audiomuted" ? audio_muted : video_muted).emplace(muted);
         } else if(payload.name == "SourceInfo") {
-            const auto info_r = json::parse(xml_unescape(payload.data));
-            dynamic_assert("failed to parse SourceInfo");
-            const auto& info = info_r.value();
+            unwrap(info, json::parse(xml_unescape(payload.data)), "failed to parse SourceInfo");
             for(auto i = info.children.begin(); i != info.children.end(); i = std::next(i)) {
                 const auto& [key, value] = *i;
                 const auto object        = value.get<json::Object>();
@@ -333,6 +328,8 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
 }
 
 auto handle_received(Conference* const conf) -> Conference::Worker::Generator {
+    constexpr auto error_value = false;
+
     // disco
     {
         const auto id   = conf->generate_iq_id();
@@ -364,17 +361,17 @@ auto handle_received(Conference* const conf) -> Conference::Worker::Generator {
         co_yield true;
 
         const auto response = xml::parse(conf->worker_arg).value();
-        dynamic_assert(response.name == "iq", "unexpected response");
-        dynamic_assert(response.is_attr_equal("id", id), "unexpected iq");
-        dynamic_assert(response.is_attr_equal("type", "result"), "unexpected iq");
+        co_ensure_v(response.name == "iq", "unexpected response");
+        co_ensure_v(response.is_attr_equal("id", id), "unexpected iq");
+        co_ensure_v(response.is_attr_equal("type", "result"), "unexpected iq");
         const auto conference = response.find_first_child("conference");
-        dynamic_assert(conference != nullptr);
-        dynamic_assert(conference->is_attr_equal("ready", "true"), "conference not ready");
+        co_ensure_v(conference != nullptr);
+        co_ensure_v(conference->is_attr_equal("ready", "true"), "conference not ready");
     }
     // presence
     {
         const auto codec_type = codec_type_str.find(conf->config.video_codec_type);
-        dynamic_assert(codec_type != nullptr, "invalid codec type config");
+        co_ensure_v(codec_type != nullptr, "invalid codec type config");
         const auto presence =
             xmpp::elm::presence.clone()
                 .append_attrs({

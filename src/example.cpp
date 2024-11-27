@@ -101,9 +101,14 @@ auto async_main(const int argc, const char* const argv[]) -> coop::Async<int> {
         const auto negotiator = xmpp::Negotiator::create(host, &callbacks);
 
         ws_context.handler = [&negotiator, &event](const std::span<const std::byte> data) -> coop::Async<void> {
-            const auto done = negotiator->feed_payload(from_span(data));
-            if(done) {
+            switch(negotiator->feed_payload(from_span(data))) {
+            case xmpp::FeedResult::Continue:
+                break;
+            case xmpp::FeedResult::Error:
+                line_panic();
+            case xmpp::FeedResult::Done:
                 event.notify();
+                break;
             }
             co_return;
         };
