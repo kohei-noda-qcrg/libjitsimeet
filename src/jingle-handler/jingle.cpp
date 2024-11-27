@@ -1,17 +1,21 @@
 #include <iomanip>
 
-#include "../config.hpp"
 #include "../crypto/sha.hpp"
 #include "../jingle/jingle.hpp"
-#include "../macros/unwrap.hpp"
 #include "../random.hpp"
 #include "../util/charconv.hpp"
+#include "../util/logger.hpp"
 #include "../util/pair-table.hpp"
 #include "cert.hpp"
 #include "jingle.hpp"
 #include "pem.hpp"
 
+#define CUTIL_MACROS_PRINT_FUNC logger.error
+#include "../macros/unwrap.hpp"
+
 namespace {
+auto logger = Logger("jingle");
+
 template <class T>
 auto replace_default(T& num, const T val) -> void {
     num = num == -1 ? val : num;
@@ -55,7 +59,7 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
             };
             r.codecs.push_back(codec);
         } else {
-            line_warn("unknown codec ", pt.name);
+            logger.warn("unknown codec ", pt.name);
         }
     }
     // parse retransmission payload types
@@ -69,7 +73,7 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
             }
             const auto apt = from_chars<int>(p.value);
             if(!apt) {
-                line_warn("invalid apt ", p.value);
+                logger.warn("invalid apt ", p.value);
                 continue;
             }
             for(auto& codec : r.codecs) {
@@ -95,7 +99,7 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
                 break;
             }
         } else {
-            line_warn("unsupported rtp header extension ", ext.uri);
+            logger.warn("unsupported rtp header extension ", ext.uri);
         }
     }
     // parse ssrc
@@ -309,11 +313,9 @@ auto JingleHandler::on_initiate(jingle::Jingle jingle) -> bool {
     auto       fingerprint_str = digest_str(fingerprint);
     auto       cert_pem        = pem::encode("CERTIFICATE", *cert_der);
     auto       priv_key_pem    = pem::encode("PRIVATE KEY", *priv_key_der);
-    if(config::debug_jingle_handler) {
-        line_print(fingerprint_str.data());
-        line_print(cert_pem.data());
-        line_print(priv_key_pem.data());
-    }
+    logger.debug("fingerprint: ", fingerprint_str.data());
+    logger.debug("cert: ", cert_pem.data());
+    logger.debug("priv_key: ", priv_key_pem.data());
 
     const auto audio_ssrc     = rng::generate_random_uint32();
     const auto video_ssrc     = rng::generate_random_uint32();
@@ -355,7 +357,7 @@ auto JingleHandler::on_add_source(jingle::Jingle jingle) -> bool {
             } else if(desc.media == "video") {
                 type = SourceType::Video;
             } else {
-                line_warn("unknown media ", desc.media);
+                logger.warn("unknown media ", desc.media);
                 continue;
             }
             for(const auto& src : desc.sources) {

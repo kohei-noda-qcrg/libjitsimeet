@@ -1,18 +1,22 @@
 #include "conference.hpp"
 #include "caps.hpp"
-#include "config.hpp"
 #include "crypto/base64.hpp"
 #include "crypto/sha.hpp"
 #include "jingle/jingle.hpp"
-#include "macros/unwrap.hpp"
 #include "random.hpp"
+#include "util/logger.hpp"
 #include "util/pair-table.hpp"
 #include "util/split.hpp"
 #include "xmpp/elements.hpp"
 #include "json/json.hpp"
 
+#define CUTIL_MACROS_PRINT_FUNC logger.error
+#include "macros/unwrap.hpp"
+
 namespace conference {
 namespace {
+auto logger = Logger("conference");
+
 auto to_span(const std::string_view str) -> std::span<std::byte> {
     return std::span<std::byte>(std::bit_cast<std::byte*>(str.data()), str.size());
 }
@@ -153,16 +157,14 @@ auto handle_iq_set(Conference* const conf, const xml::Node& iq) -> bool {
     unwrap(from, iq.find_attr("from"));
     unwrap(from_jid, xmpp::Jid::parse(from));
     if(from_jid.resource != "focus") {
-        line_warn("ignoring iq from ", from_jid.resource);
+        logger.warn("ignoring iq from ", from_jid.resource);
         return true;
     }
     unwrap(id, iq.find_attr("id"));
     unwrap(jingle_node, iq.find_first_child("jingle"));
     unwrap_mut(jingle, jingle::parse(jingle_node));
 
-    if(config::debug_conference) {
-        line_warn("jingle action ", int(jingle.action));
-    }
+    logger.debug("jingle action ", int(jingle.action));
     switch(jingle.action) {
     case jingle::Jingle::Action::SessionInitiate:
         conf->callbacks->on_jingle_initiate(std::move(jingle));
@@ -171,7 +173,7 @@ auto handle_iq_set(Conference* const conf, const xml::Node& iq) -> bool {
         conf->callbacks->on_jingle_add_source(std::move(jingle));
         goto ack;
     default:
-        line_warn("unimplemented jingle action: ", int(jingle.action));
+        logger.warn("unimplemented jingle action: ", int(jingle.action));
         return true;
     }
 
@@ -194,7 +196,7 @@ auto handle_iq_result(Conference* const conf, const xml::Node& iq, bool success)
             continue;
         }
         if(!success) {
-            line_warn("iq ", id, " failed");
+            logger.error("iq ", id, " failed");
         }
         if(i->on_result) {
             i->on_result(success);
@@ -225,16 +227,14 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
 
     unwrap(from_str, presence.find_attr("from"));
     unwrap(from, xmpp::Jid::parse(from_str));
-    if(config::debug_conference) {
-        line_print("got presence from ", from_str);
-    }
+    logger.debug("got presence from ", from_str);
     if(const auto type = presence.find_attr("type"); type) {
         if(*type == "unavailable") {
             if(const auto i = conf->participants.find(from.resource); i != conf->participants.end()) {
                 conf->callbacks->on_participant_left(i->second);
                 conf->participants.erase(i);
             } else {
-                line_warn("got unavailable presence from unknown participant");
+                logger.warn("got unavailable presence from unknown participant");
             }
         }
         return true;
@@ -274,7 +274,7 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
             } else if(payload.data == "false") {
                 muted = false;
             } else {
-                line_warn("unknown {audio,video}muted data: ", payload.data);
+                logger.warn("unknown {audio,video}muted data: ", payload.data);
             }
             (payload.name == "audiomuted" ? audio_muted : video_muted).emplace(muted);
         } else if(payload.name == "SourceInfo") {
@@ -299,7 +299,7 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
                 } else if(source_name == participant->participant_id + "-v0") {
                     video_muted.emplace(v->value);
                 } else {
-                    line_warn("unsupported source name format: ", source_name);
+                    logger.warn("unsupported source name format: ", source_name);
                     continue;
                 }
             }
@@ -423,7 +423,7 @@ loop:
     do {
         const auto response_r = xml::parse(conf->worker_arg);
         if(!response_r) {
-            line_warn("xml parse error");
+            logger.error("xml parse error");
             break;
         }
         const auto& response = response_r.value();
@@ -432,7 +432,7 @@ loop:
         } else if(response.name == "presence") {
             yield = handle_presence(conf, response);
         } else {
-            line_warn("not implemented xmpp message ", response.name);
+            logger.warn("not implemented xmpp message ", response.name);
         }
     } while(0);
     co_yield yield;

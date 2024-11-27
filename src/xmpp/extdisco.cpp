@@ -1,10 +1,15 @@
 #include "extdisco.hpp"
-#include "../macros/unwrap.hpp"
 #include "../util/charconv.hpp"
+#include "../util/logger.hpp"
 #include "../xml/xml.hpp"
+
+#define CUTIL_MACROS_PRINT_FUNC logger.error
+#include "../macros/unwrap.hpp"
 
 namespace xmpp {
 namespace {
+auto logger = Logger("xmpp");
+
 auto parse_service(const xml::Node& node) -> std::optional<Service> {
     auto r          = Service{};
     auto found_type = false;
@@ -38,7 +43,7 @@ auto parse_service(const xml::Node& node) -> std::optional<Service> {
                 bail("unknown restricted");
             }
         } else {
-            line_warn("unhandled attribute ", a.key);
+            logger.warn("unhandled attribute ", a.key);
         }
     }
     if(!found_type || !found_host) {
@@ -47,7 +52,7 @@ auto parse_service(const xml::Node& node) -> std::optional<Service> {
     for(const auto& c : node.children) {
         if(0) {
         } else {
-            line_warn("unhandled child ", c.name);
+            logger.warn("unhandled child ", c.name);
         }
     }
     return r;
@@ -62,7 +67,7 @@ auto parse_services(const xml::Node& services) -> std::optional<std::vector<Serv
         if(const auto s = parse_service(service); s) {
             r.push_back(*s);
         } else {
-            line_warn("failed to parse service");
+            logger.error("failed to parse service");
             continue;
         }
     }

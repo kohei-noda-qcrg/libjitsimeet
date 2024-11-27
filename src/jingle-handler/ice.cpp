@@ -4,16 +4,19 @@
 #include <WinSock2.h>
 #endif
 
-#include "../config.hpp"
-#include "../macros/unwrap.hpp"
-#include "../util/assert.hpp"
+#include "../util/logger.hpp"
 #include "hostaddr.hpp"
 #include "ice.hpp"
+
+#define CUTIL_MACROS_PRINT_FUNC logger.error
+#include "../macros/unwrap.hpp"
 
 namespace ice {
 namespace {
 constexpr auto default_stun_port = 3478;
 constexpr auto default_turn_port = 5349;
+
+auto logger = Logger("ice");
 
 auto set_stun_turn(NiceAgent* const                     agent,
                    const std::span<const xmpp::Service> external_services,
@@ -26,9 +29,7 @@ auto set_stun_turn(NiceAgent* const                     agent,
             const auto hostaddr = hostname_to_addr(es.host.data());
             ensure(!hostaddr.empty(), "failed to resolve stun server address ", es.host);
             const auto port = es.port != 0 ? es.port : default_stun_port;
-            if(config::debug_ice) {
-                line_warn("stun address: ", hostaddr, ":", port);
-            }
+            logger.debug("stun address: ", hostaddr, ":", port);
             g_object_set(agent,
                          "stun-server", hostaddr.data(),
                          "stun-server-port", port,
@@ -38,9 +39,7 @@ auto set_stun_turn(NiceAgent* const                     agent,
             const auto hostaddr = hostname_to_addr(es.host.data());
             ensure(!hostaddr.empty(), "failed to resolve turn server address ", es.host);
             const auto port = es.port != 0 ? es.port : default_turn_port;
-            if(config::debug_ice) {
-                line_print("turn address: ", hostaddr, ":", port);
-            }
+            logger.debug("turn address: ", hostaddr, ":", port);
             if(nice_agent_set_relay_info(agent,
                                          stream_id,
                                          component_id,
@@ -61,15 +60,11 @@ auto set_stun_turn(NiceAgent* const                     agent,
 }
 
 auto agent_recv_callback(NiceAgent* const /*agent*/, const guint /*stream_id*/, const guint /*component_id*/, const guint /*len*/, gchar* const buf, const gpointer /*user_data*/) -> void {
-    if(config::debug_ice) {
-        line_print("agent-recv: ", buf);
-    }
+    logger.debug("agent-recv: ", buf);
 }
 
 auto candidate_gathering_done(NiceAgent* const /*agent*/, const guint /*stream_id*/, const gpointer /*user_data*/) -> void {
-    if(config::debug_ice) {
-        line_print("candidate-gathering-done");
-    }
+    logger.debug("candidate-gathering-done");
 }
 
 auto candidate_type_conv_table = std::array<std::pair<jingle::Jingle::Content::IceUdpTransport::Candidate::Type, NiceCandidateType>, 4>{{
@@ -92,7 +87,7 @@ auto set_remote_candidates(NiceAgent* const                                agent
         if(const auto addr = str_to_sockaddr(tc.ip_addr.data(), tc.port); addr.s.addr.sa_family != AF_UNSPEC) {
             nc->addr = addr;
         } else {
-            line_warn("failed to parse candidate ip address");
+            logger.error("failed to parse candidate ip address");
             r = false;
             goto end;
         }
@@ -106,7 +101,7 @@ auto set_remote_candidates(NiceAgent* const                                agent
         list = g_slist_prepend(list, nc);
     }
     if(nice_agent_set_remote_candidates(agent, stream_id, component_id, list) != int(transport.candidates.size())) {
-        line_warn("failed to add candidates");
+        logger.error("failed to add candidates");
         r = false;
         goto end;
     }
@@ -168,7 +163,7 @@ auto setup(const std::span<const xmpp::Service>                  external_servic
         ensure(set_remote_candidates(agent.get(), *transport, stream_id, component_id), "failed to add candidates");
     }
 
-    nice_debug_enable(config::debug_ice ? TRUE : FALSE);
+    nice_debug_enable(logger.loglevel == Loglevel::Debug ? TRUE : FALSE);
     mainloop->start_runner();
 
     return Agent{

@@ -1,18 +1,20 @@
 #include "negotiator.hpp"
-#include "../config.hpp"
-#include "../macros/unwrap.hpp"
 #include "../util/coroutine.hpp"
+#include "../util/logger.hpp"
 #include "../xml/xml.hpp"
 #include "elements.hpp"
 
+#define CUTIL_MACROS_PRINT_FUNC logger.error
+#include "../macros/unwrap.hpp"
+
 namespace xmpp {
 namespace {
+auto logger = Logger("xmpp");
+
 auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
     constexpr auto error_value = FeedResult::Error;
 
-    if(config::debug_xmpp_connection) {
-        line_print("negotiation started");
-    }
+    logger.debug("negotiation started");
     auto& self = *negotiator;
     // open
     {
@@ -88,9 +90,7 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
             self.jid = std::move(jid);
             break;
         }
-        if(config::debug_xmpp_connection) {
-            line_print("jid: ", self.jid.as_full());
-        }
+        logger.debug("jid: ", self.jid.as_full());
     }
     // disco
     {

@@ -1,11 +1,14 @@
 #include "colibri.hpp"
-#include "config.hpp"
-#include "macros/unwrap.hpp"
 #include "uri.hpp"
-#include "util/assert.hpp"
+#include "util/logger.hpp"
+
+#define CUTIL_MACROS_PRINT_FUNC logger.error
+#include "macros/unwrap.hpp"
 
 namespace colibri {
 namespace {
+auto logger = Logger("colibri");
+
 auto find_transport(const jingle::Jingle& jingle) -> const jingle::Jingle::Content::IceUdpTransport* {
     for(const auto& c : jingle.contents) {
         if(!c.transports.empty()) {
@@ -27,9 +30,7 @@ Colibri::~Colibri() {
 auto Colibri::connect(const jingle::Jingle& initiate_jingle, const bool secure) -> std::unique_ptr<Colibri> {
     unwrap(transport, find_transport(initiate_jingle));
     unwrap(ws_uri, URI::parse(transport.websocket));
-    if(config::debug_colibri) {
-        line_print("connecting to colibri at ", transport.websocket);
-    }
+    logger.info("connecting to colibri at ", transport.websocket);
 
     const auto uri_domain = std::string(ws_uri.domain);
     const auto uri_path   = std::string(ws_uri.path);
