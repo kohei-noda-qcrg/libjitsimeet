@@ -1,5 +1,4 @@
-#include "../macros/assert.hpp"
-#include "../util/assert.hpp"
+#include "../macros/unwrap.hpp"
 #include "../util/charconv.hpp"
 #include "../xml/xml.hpp"
 #include "common.hpp"
@@ -29,26 +28,22 @@ auto parse_template(const xml::Node& node) -> std::optional<T> {
     return r;
 }
 
-#define num_or_nullopt(field, value)                           \
-    if(const auto v = from_chars<decltype(field)>(value); v) { \
-        field = *v;                                            \
-    } else {                                                   \
-        return std::nullopt;                                   \
+#define num_or_nullopt(field, value)                     \
+    {                                                    \
+        unwrap(num, from_chars<decltype(field)>(value)); \
+        field = num;                                     \
     }
 
 #define unwrap_parsed_or_nullopt(opt, field) \
-    if(const auto p = opt; !p) {             \
-        line_warn("parse failed");           \
-    } else {                                 \
-        field.push_back(*p);                 \
+    {                                        \
+        unwrap_mut(value, opt);              \
+        field.push_back(std::move(value));   \
     }
 
-#define search_str_array_or_null(arr, field, value)    \
-    if(const auto e = arr.find(value); e != nullptr) { \
-        field = *e;                                    \
-    } else {                                           \
-        line_warn("unknown enum ", value);             \
-        return std::nullopt;                           \
+#define search_str_array_or_null(arr, field, value)           \
+    {                                                         \
+        unwrap(num, arr.find(value), "unknown enum ", value); \
+        field = num;                                          \
     }
 
 template <bool optional_value>
@@ -159,16 +154,12 @@ auto parse_source(const xml::Node& node) -> std::optional<Jingle::Content::RTPDe
         if(c.name == "parameter") {
             unwrap_parsed_or_nullopt(parse_parameter<true>(c, ns::rtp), r.parameters);
         } else if(c.name == "ssrc-info") {
-            if(!c.is_attr_equal("xmlns", ns::jitsi_jitmeet)) {
-                line_warn("invalid ssrc-info");
-                return std::nullopt;
-            }
+            ensure(c.is_attr_equal("xmlns", ns::jitsi_jitmeet), "invalid ssrc-info");
             if(const auto owner_o = c.find_attr("owner"); owner_o) {
                 r.owner     = *owner_o;
                 found_owner = true;
             } else {
-                line_warn("ssrc-info has no owner");
-                return std::nullopt;
+                bail("ssrc-info has no owner");
             }
         } else {
             line_warn("unhandled child ", c.name);
@@ -223,13 +214,9 @@ auto parse_ssrc_group(const xml::Node& node) -> std::optional<Jingle::Content::R
     ensure(found_semantics, "required attributes not found");
     for(const auto& c : node.children) {
         if(c.name == "source") {
-            const auto attr = c.find_attr("ssrc");
-            if(!attr.has_value()) {
-                line_warn("source has not ssrc attribute");
-                return std::nullopt;
-            }
+            unwrap(attr, c.find_attr("ssrc"), "source has not ssrc attribute");
             auto ssrc = uint32_t(0);
-            num_or_nullopt(ssrc, *attr);
+            num_or_nullopt(ssrc, attr);
             r.ssrcs.push_back(ssrc);
         } else {
             line_warn("unhandled child ", c.name);
@@ -273,10 +260,7 @@ auto parse_rtp_description(const xml::Node& node) -> std::optional<Jingle::Conte
 }
 
 auto parse_fingerprint(const xml::Node& node) -> std::optional<Jingle::Content::IceUdpTransport::FingerPrint> {
-    if(node.data.empty()) {
-        line_warn("empty fingerprint");
-        return std::nullopt;
-    }
+    ensure(!node.data.empty(), "empty fingerprint");
 
     auto r = Jingle::Content::IceUdpTransport::FingerPrint{
         .hash = std::string(node.data),
@@ -297,8 +281,7 @@ auto parse_fingerprint(const xml::Node& node) -> std::optional<Jingle::Content::
             } else if(a.value == "false") {
                 r.required = false;
             } else {
-                line_warn("invalid required");
-                return std::nullopt;
+                bail("invalid required");
             }
         } else if(a.key == "xmlns") {
             ensure(a.value == ns::dtls, "unsupported xmlns ", a.value);
@@ -341,11 +324,6 @@ auto parse_candidate(const xml::Node& node) -> std::optional<Jingle::Content::Ic
             num_or_nullopt(r.priority, a.value);
             found_priority = true;
         } else if(a.key == "type") {
-            if(const auto e = candidate_type_str.find(a.value); e != nullptr) {
-                r.type = *e;
-            } else {
-                return std::nullopt;
-            }
             search_str_array_or_null(candidate_type_str, r.type, a.value);
             found_type = true;
         } else if(a.key == "foundation") {
@@ -358,10 +336,7 @@ auto parse_candidate(const xml::Node& node) -> std::optional<Jingle::Content::Ic
             r.ip_addr     = a.value;
             found_ip_addr = true;
         } else if(a.key == "protocol") {
-            if(a.value != "udp") {
-                line_warn("unsupported protocol");
-                return std::nullopt;
-            }
+            ensure(a.value == "udp", "unsupported protocol ", a.value);
         } else if(a.key == "network") {
             // ignore
         } else if(a.key == "rel-addr") {
@@ -441,8 +416,7 @@ auto parse_content(const xml::Node& node) -> std::optional<Jingle::Content> {
             } else if(a.value == "responder") {
                 r.is_from_initiator = false;
             } else {
-                line_warn("unknown creator ", a.value);
-                return std::nullopt;
+                bail("unknown creator ", a.value);
             }
         } else {
             line_warn("unhandled attribute ", a.key);
