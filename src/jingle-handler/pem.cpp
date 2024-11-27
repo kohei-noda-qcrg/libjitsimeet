@@ -1,6 +1,6 @@
 #include <string>
 
-#include "../base64.hpp"
+#include "../crypto/base64.hpp"
 
 namespace pem {
 auto encode(const std::string_view label, const std::span<const std::byte> bytes) -> std::string {
@@ -11,7 +11,7 @@ auto encode(const std::string_view label, const std::span<const std::byte> bytes
     r += "-----";
     r += '\n';
 
-    auto b64 = base64::encode(bytes);
+    auto b64 = crypto::base64::encode(bytes);
     auto pos = 0u;
     while(pos + 64 < b64.size()) {
         r += b64.substr(pos, 64);

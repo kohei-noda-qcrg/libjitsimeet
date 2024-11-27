@@ -1,11 +1,11 @@
 #include "conference.hpp"
-#include "base64.hpp"
 #include "caps.hpp"
 #include "config.hpp"
+#include "crypto/base64.hpp"
+#include "crypto/sha.hpp"
 #include "jingle/jingle.hpp"
 #include "macros/unwrap.hpp"
 #include "random.hpp"
-#include "sha.hpp"
 #include "util/pair-table.hpp"
 #include "util/split.hpp"
 #include "xmpp/elements.hpp"
@@ -503,10 +503,10 @@ auto Conference::create(Config config, ConferenceCallbacks* const callbacks) -> 
     };
 
     const auto disco_str      = compute_disco_str(disco_info);
-    const auto disco_sha1     = sha::calc_sha1(to_span(disco_str));
-    const auto disco_sha256   = sha::calc_sha256(to_span(disco_str));
-    conf->disco_sha1_base64   = base64::encode(disco_sha1);
-    conf->disco_sha256_base64 = base64::encode(disco_sha256);
+    const auto disco_sha1     = crypto::sha::calc_sha1(to_span(disco_str));
+    const auto disco_sha256   = crypto::sha::calc_sha256(to_span(disco_str));
+    conf->disco_sha1_base64   = crypto::base64::encode(disco_sha1);
+    conf->disco_sha256_base64 = crypto::base64::encode(disco_sha256);
 
     return std::unique_ptr<Conference>(conf);
 }

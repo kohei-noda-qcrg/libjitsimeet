@@ -9,10 +9,11 @@ libjitsimeet_deps = [
 
 libjitsimeet_src = files(
   'async-websocket.cpp',
-  'base64.cpp',
   'caps.cpp',
   'colibri.cpp',
   'conference.cpp',
+  'crypto/base64.cpp',
+  'crypto/sha.cpp',
   'jingle-handler/cert.cpp',
   'jingle-handler/hostaddr.cpp',
   'jingle-handler/ice.cpp',
@@ -21,7 +22,6 @@ libjitsimeet_src = files(
   'jingle/deparser.cpp',
   'jingle/parser.cpp',
   'random.cpp',
-  'sha.cpp',
   'uri.cpp',
   'xmpp/extdisco.cpp',
   'xmpp/jid.cpp',

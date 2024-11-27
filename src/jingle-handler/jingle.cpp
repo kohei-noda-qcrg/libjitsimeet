@@ -1,10 +1,10 @@
 #include <iomanip>
 
 #include "../config.hpp"
+#include "../crypto/sha.hpp"
 #include "../jingle/jingle.hpp"
 #include "../macros/unwrap.hpp"
 #include "../random.hpp"
-#include "../sha.hpp"
 #include "../util/charconv.hpp"
 #include "../util/pair-table.hpp"
 #include "cert.hpp"
@@ -311,7 +311,7 @@ auto JingleHandler::on_initiate(jingle::Jingle jingle) -> bool {
     ensure(cert_der);
     const auto priv_key_der = cert::serialize_private_key_pkcs8_der(cert.get());
     ensure(priv_key_der);
-    const auto fingerprint     = sha::calc_sha256(*cert_der);
+    const auto fingerprint     = crypto::sha::calc_sha256(*cert_der);
     auto       fingerprint_str = digest_str(fingerprint);
     auto       cert_pem        = pem::encode("CERTIFICATE", *cert_der);
     auto       priv_key_pem    = pem::encode("PRIVATE KEY", *priv_key_der);
