@@ -22,19 +22,21 @@ struct Cert {
 };
 
 namespace {
+constexpr auto error_value = nullptr;
+
 auto generate_pkey() -> AutoPKey {
     const auto ctx = AutoPKeyCtx(EVP_PKEY_CTX_new_id(EVP_PKEY_EC, NULL));
-    ensure(ctx != NULL);
-    ensure(EVP_PKEY_keygen_init(ctx.get()) == 1);
-    ensure(EVP_PKEY_CTX_set_ec_paramgen_curve_nid(ctx.get(), NID_X9_62_prime256v1) == 1);
+    ensure_v(ctx != NULL);
+    ensure_v(EVP_PKEY_keygen_init(ctx.get()) == 1);
+    ensure_v(EVP_PKEY_CTX_set_ec_paramgen_curve_nid(ctx.get(), NID_X9_62_prime256v1) == 1);
     auto pkey = (EVP_PKEY*)(nullptr);
-    ensure(EVP_PKEY_keygen(ctx.get(), &pkey) == 1);
+    ensure_v(EVP_PKEY_keygen(ctx.get(), &pkey) == 1);
     return AutoPKey(pkey);
 }
 
 auto generate_x509(EVP_PKEY* const pkey) -> AutoX509 {
     auto x = AutoX509(X509_new());
-    ensure(x != NULL);
+    ensure_v(x != NULL);
     ASN1_INTEGER_set(X509_get_serialNumber(x.get()), 1);
     X509_gmtime_adj(X509_get_notBefore(x.get()), 0);
     X509_gmtime_adj(X509_get_notAfter(x.get()), 365 * 24 * 60 * 60);
@@ -44,7 +46,7 @@ auto generate_x509(EVP_PKEY* const pkey) -> AutoX509 {
     X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (unsigned char*)"JP", -1, -1, 0);
     X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (unsigned char*)"gstjitsimeet", -1, -1, 0);
     X509_set_issuer_name(x.get(), name);
-    ensure(X509_sign(x.get(), pkey, EVP_sha256()));
+    ensure_v(X509_sign(x.get(), pkey, EVP_sha256()));
     return x;
 }
 

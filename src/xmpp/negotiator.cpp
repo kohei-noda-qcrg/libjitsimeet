@@ -1,10 +1,10 @@
 #include "negotiator.hpp"
+#include "../macros/logger.hpp"
 #include "../util/coroutine.hpp"
-#include "../util/logger.hpp"
 #include "../xml/xml.hpp"
 #include "elements.hpp"
 
-#define CUTIL_MACROS_PRINT_FUNC logger.error
+#define CUTIL_MACROS_PRINT_FUNC(...) LOG_ERROR(logger, __VA_ARGS__)
 #include "../macros/unwrap.hpp"
 
 namespace xmpp {
@@ -14,7 +14,7 @@ auto logger = Logger("xmpp");
 auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
     constexpr auto error_value = FeedResult::Error;
 
-    logger.debug("negotiation started");
+    LOG_DEBUG(logger, "negotiation started");
     auto& self = *negotiator;
     // open
     {
@@ -90,7 +90,7 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
             self.jid = std::move(jid);
             break;
         }
-        logger.debug("jid: ", self.jid.as_full());
+        LOG_DEBUG(logger, "jid: ", self.jid.as_full());
     }
     // disco
     {

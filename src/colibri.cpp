@@ -1,8 +1,8 @@
 #include "colibri.hpp"
+#include "macros/logger.hpp"
 #include "uri.hpp"
-#include "util/logger.hpp"
 
-#define CUTIL_MACROS_PRINT_FUNC logger.error
+#define CUTIL_MACROS_PRINT_FUNC(...) LOG_ERROR(logger, __VA_ARGS__)
 #include "macros/unwrap.hpp"
 
 namespace colibri {
@@ -30,7 +30,7 @@ Colibri::~Colibri() {
 auto Colibri::connect(const jingle::Jingle& initiate_jingle, const bool secure) -> std::unique_ptr<Colibri> {
     unwrap(transport, find_transport(initiate_jingle));
     unwrap(ws_uri, URI::parse(transport.websocket));
-    logger.info("connecting to colibri at ", transport.websocket);
+    LOG_INFO(logger, "connecting to colibri at ", transport.websocket);
 
     const auto uri_domain = std::string(ws_uri.domain);
     const auto uri_path   = std::string(ws_uri.path);

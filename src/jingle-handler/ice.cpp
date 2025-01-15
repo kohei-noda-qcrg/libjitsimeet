@@ -4,11 +4,11 @@
 #include <WinSock2.h>
 #endif
 
-#include "../util/logger.hpp"
+#include "../macros/logger.hpp"
 #include "hostaddr.hpp"
 #include "ice.hpp"
 
-#define CUTIL_MACROS_PRINT_FUNC logger.error
+#define CUTIL_MACROS_PRINT_FUNC(...) LOG_ERROR(logger, __VA_ARGS__)
 #include "../macros/unwrap.hpp"
 
 namespace ice {
@@ -29,7 +29,7 @@ auto set_stun_turn(NiceAgent* const                     agent,
             const auto hostaddr = hostname_to_addr(es.host.data());
             ensure(!hostaddr.empty(), "failed to resolve stun server address ", es.host);
             const auto port = es.port != 0 ? es.port : default_stun_port;
-            logger.debug("stun address: ", hostaddr, ":", port);
+            LOG_DEBUG(logger, "stun address: ", hostaddr, ":", port);
             g_object_set(agent,
                          "stun-server", hostaddr.data(),
                          "stun-server-port", port,
@@ -39,7 +39,7 @@ auto set_stun_turn(NiceAgent* const                     agent,
             const auto hostaddr = hostname_to_addr(es.host.data());
             ensure(!hostaddr.empty(), "failed to resolve turn server address ", es.host);
             const auto port = es.port != 0 ? es.port : default_turn_port;
-            logger.debug("turn address: ", hostaddr, ":", port);
+            LOG_DEBUG(logger, "turn address: ", hostaddr, ":", port);
             if(nice_agent_set_relay_info(agent,
                                          stream_id,
                                          component_id,
@@ -60,11 +60,11 @@ auto set_stun_turn(NiceAgent* const                     agent,
 }
 
 auto agent_recv_callback(NiceAgent* const /*agent*/, const guint /*stream_id*/, const guint /*component_id*/, const guint /*len*/, gchar* const buf, const gpointer /*user_data*/) -> void {
-    logger.debug("agent-recv: ", buf);
+    LOG_DEBUG(logger, "agent-recv: ", buf);
 }
 
 auto candidate_gathering_done(NiceAgent* const /*agent*/, const guint /*stream_id*/, const gpointer /*user_data*/) -> void {
-    logger.debug("candidate-gathering-done");
+    LOG_DEBUG(logger, "candidate-gathering-done");
 }
 
 auto candidate_type_conv_table = std::array<std::pair<jingle::Jingle::Content::IceUdpTransport::Candidate::Type, NiceCandidateType>, 4>{{
@@ -87,7 +87,7 @@ auto set_remote_candidates(NiceAgent* const                                agent
         if(const auto addr = str_to_sockaddr(tc.ip_addr.data(), tc.port); addr.s.addr.sa_family != AF_UNSPEC) {
             nc->addr = addr;
         } else {
-            logger.error("failed to parse candidate ip address");
+            LOG_ERROR(logger, "failed to parse candidate ip address");
             r = false;
             goto end;
         }
@@ -101,7 +101,7 @@ auto set_remote_candidates(NiceAgent* const                                agent
         list = g_slist_prepend(list, nc);
     }
     if(nice_agent_set_remote_candidates(agent, stream_id, component_id, list) != int(transport.candidates.size())) {
-        logger.error("failed to add candidates");
+        LOG_ERROR(logger, "failed to add candidates");
         r = false;
         goto end;
     }

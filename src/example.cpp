@@ -105,7 +105,7 @@ auto async_main(const int argc, const char* const argv[]) -> coop::Async<int> {
             case xmpp::FeedResult::Continue:
                 break;
             case xmpp::FeedResult::Error:
-                line_panic();
+                PANIC();
             case xmpp::FeedResult::Done:
                 event.notify();
                 break;

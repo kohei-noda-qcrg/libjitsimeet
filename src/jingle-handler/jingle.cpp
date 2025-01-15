@@ -2,15 +2,15 @@
 
 #include "../crypto/sha.hpp"
 #include "../jingle/jingle.hpp"
+#include "../macros/logger.hpp"
 #include "../random.hpp"
 #include "../util/charconv.hpp"
-#include "../util/logger.hpp"
 #include "../util/pair-table.hpp"
 #include "cert.hpp"
 #include "jingle.hpp"
 #include "pem.hpp"
 
-#define CUTIL_MACROS_PRINT_FUNC logger.error
+#define CUTIL_MACROS_PRINT_FUNC(...) LOG_ERROR(logger, __VA_ARGS__)
 #include "../macros/unwrap.hpp"
 
 namespace {
@@ -59,7 +59,7 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
             };
             r.codecs.push_back(codec);
         } else {
-            logger.warn("unknown codec ", pt.name);
+            LOG_WARN(logger, "unknown codec ", pt.name);
         }
     }
     // parse retransmission payload types
@@ -73,7 +73,7 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
             }
             const auto apt = from_chars<int>(p.value);
             if(!apt) {
-                logger.warn("invalid apt ", p.value);
+                LOG_WARN(logger, "invalid apt ", p.value);
                 continue;
             }
             for(auto& codec : r.codecs) {
@@ -99,7 +99,7 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
                 break;
             }
         } else {
-            logger.warn("unsupported rtp header extension ", ext.uri);
+            LOG_WARN(logger, "unsupported rtp header extension ", ext.uri);
         }
     }
     // parse ssrc
@@ -313,9 +313,9 @@ auto JingleHandler::on_initiate(jingle::Jingle jingle) -> bool {
     auto       fingerprint_str = digest_str(fingerprint);
     auto       cert_pem        = pem::encode("CERTIFICATE", *cert_der);
     auto       priv_key_pem    = pem::encode("PRIVATE KEY", *priv_key_der);
-    logger.debug("fingerprint: ", fingerprint_str.data());
-    logger.debug("cert: ", cert_pem.data());
-    logger.debug("priv_key: ", priv_key_pem.data());
+    LOG_DEBUG(logger, "fingerprint: ", fingerprint_str.data());
+    LOG_DEBUG(logger, "cert: ", cert_pem.data());
+    LOG_DEBUG(logger, "priv_key: ", priv_key_pem.data());
 
     const auto audio_ssrc     = rng::generate_random_uint32();
     const auto video_ssrc     = rng::generate_random_uint32();
@@ -357,7 +357,7 @@ auto JingleHandler::on_add_source(jingle::Jingle jingle) -> bool {
             } else if(desc.media == "video") {
                 type = SourceType::Video;
             } else {
-                logger.warn("unknown media ", desc.media);
+                LOG_WARN(logger, "unknown media ", desc.media);
                 continue;
             }
             for(const auto& src : desc.sources) {

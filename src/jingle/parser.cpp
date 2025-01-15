@@ -1,10 +1,10 @@
+#include "../macros/logger.hpp"
 #include "../util/charconv.hpp"
-#include "../util/logger.hpp"
 #include "../xml/xml.hpp"
 #include "common.hpp"
 #include "jingle.hpp"
 
-#define CUTIL_MACROS_PRINT_FUNC logger.error
+#define CUTIL_MACROS_PRINT_FUNC(...) LOG_ERROR(logger, __VA_ARGS__)
 #include "../macros/unwrap.hpp"
 
 namespace jingle {
@@ -20,14 +20,14 @@ auto parse_template(const xml::Node& node) -> std::optional<T> {
         if(0) {
             found = true;
         } else {
-            logger.warn("unhandled attribute ", a.key);
+            LOG_WARN(logger, "unhandled attribute ", a.key);
         }
     }
     ensure(found, "required attributes not found");
     for(const auto& c : node.children) {
         if(0) {
         } else {
-            logger.warn("unhandled child ", c.name);
+            LOG_WARN(logger, "unhandled child ", c.name);
         }
     }
     return r;
@@ -67,14 +67,14 @@ auto parse_parameter(const xml::Node& node, const std::string_view ns) -> std::o
         } else if(a.key == "xmlns") {
             ensure(a.value == ns, "unsupported xmlns ", a.value);
         } else {
-            logger.warn("unhandled attribute ", a.key);
+            LOG_WARN(logger, "unhandled attribute ", a.key);
         }
     }
     ensure(found_name && (optional_value || found_value), "required attributes not found");
     for(const auto& c : node.children) {
         if(0) {
         } else {
-            logger.warn("unhandled child ", c.name);
+            LOG_WARN(logger, "unhandled child ", c.name);
         }
     }
     return r;
@@ -93,14 +93,14 @@ auto parse_rtcp_fb(const xml::Node& node) -> std::optional<Jingle::Content::RTPD
         } else if(a.key == "xmlns") {
             ensure(a.value == ns::rtp_rtcp_fb, "unsupported xmlns ", a.value);
         } else {
-            logger.warn("unhandled attribute ", a.key);
+            LOG_WARN(logger, "unhandled attribute ", a.key);
         }
     }
     ensure(found_type, "required attributes not found");
     for(const auto& c : node.children) {
         if(0) {
         } else {
-            logger.warn("unhandled child ", c.name);
+            LOG_WARN(logger, "unhandled child ", c.name);
         }
     }
     return r;
@@ -121,7 +121,7 @@ auto parse_payload_type(const xml::Node& node) -> std::optional<Jingle::Content:
         } else if(a.key == "name") {
             r.name = a.value;
         } else {
-            logger.warn("unhandled attribute ", a.key);
+            LOG_WARN(logger, "unhandled attribute ", a.key);
         }
     }
     ensure(found_id, "required attributes not found");
@@ -131,7 +131,7 @@ auto parse_payload_type(const xml::Node& node) -> std::optional<Jingle::Content:
         } else if(c.name == "parameter") {
             unwrap_parsed_or_nullopt(parse_parameter<false>(c, {}), r.parameters);
         } else {
-            logger.warn("unhandled child ", c.name);
+            LOG_WARN(logger, "unhandled child ", c.name);
         }
     }
     return r;
@@ -150,7 +150,7 @@ auto parse_source(const xml::Node& node) -> std::optional<Jingle::Content::RTPDe
         } else if(a.key == "name") {
             r.name = a.value;
         } else {
-            logger.warn("unhandled attribute ", a.key);
+            LOG_WARN(logger, "unhandled attribute ", a.key);
         }
     }
     ensure(found_ssrc, "required attributes not found");
@@ -167,7 +167,7 @@ auto parse_source(const xml::Node& node) -> std::optional<Jingle::Content::RTPDe
                 bail("ssrc-info has no owner");
             }
         } else {
-            logger.warn("unhandled child ", c.name);
+            LOG_WARN(logger, "unhandled child ", c.name);
         }
     }
     ensure(found_owner, "required children not found");
@@ -189,14 +189,14 @@ auto parse_rtp_header_ext(const xml::Node& node) -> std::optional<Jingle::Conten
         } else if(a.key == "xmlns") {
             ensure(a.value == ns::rtp_headerext, "unsupported xmlns ", a.value);
         } else {
-            logger.warn("unhandled attribute ", a.key);
+            LOG_WARN(logger, "unhandled attribute ", a.key);
         }
     }
     ensure(found_id && found_uri, "required attributes not found");
     for(const auto& c : node.children) {
         if(0) {
         } else {
-            logger.warn("unhandled child ", c.name);
+            LOG_WARN(logger, "unhandled child ", c.name);
         }
     }
     return r;
@@ -213,7 +213,7 @@ auto parse_ssrc_group(const xml::Node& node) -> std::optional<Jingle::Content::R
         } else if(a.key == "xmlns") {
             ensure(a.value == ns::rtp_ssma, "unsupported xmlns ", a.value);
         } else {
-            logger.warn("unhandled attribute ", a.key);
+            LOG_WARN(logger, "unhandled attribute ", a.key);
         }
     }
     ensure(found_semantics, "required attributes not found");
@@ -224,7 +224,7 @@ auto parse_ssrc_group(const xml::Node& node) -> std::optional<Jingle::Content::R
             num_or_nullopt(ssrc, attr);
             r.ssrcs.push_back(ssrc);
         } else {
-            logger.warn("unhandled child ", c.name);
+            LOG_WARN(logger, "unhandled child ", c.name);
         }
     }
     return r;
@@ -243,7 +243,7 @@ auto parse_rtp_description(const xml::Node& node) -> std::optional<Jingle::Conte
         } else if(a.key == "maxptime") {
             // TODO: handle maxptime
         } else {
-            logger.warn("unhandled attribute ", a.key);
+            LOG_WARN(logger, "unhandled attribute ", a.key);
         }
     }
     for(const auto& c : node.children) {
@@ -258,7 +258,7 @@ auto parse_rtp_description(const xml::Node& node) -> std::optional<Jingle::Conte
         } else if(c.name == "rtcp-mux") {
             r.support_mux = true;
         } else {
-            logger.warn("unhandled child ", c.name);
+            LOG_WARN(logger, "unhandled child ", c.name);
         }
     }
     return r;
@@ -291,14 +291,14 @@ auto parse_fingerprint(const xml::Node& node) -> std::optional<Jingle::Content::
         } else if(a.key == "xmlns") {
             ensure(a.value == ns::dtls, "unsupported xmlns ", a.value);
         } else {
-            logger.warn("unhandled attribute ", a.key);
+            LOG_WARN(logger, "unhandled attribute ", a.key);
         }
     }
     ensure(found_hash && found_setup, "required attributes not found");
     for(const auto& c : node.children) {
         if(0) {
         } else {
-            logger.warn("unhandled child ", c.name);
+            LOG_WARN(logger, "unhandled child ", c.name);
         }
     }
     return r;
@@ -349,14 +349,14 @@ auto parse_candidate(const xml::Node& node) -> std::optional<Jingle::Content::Ic
         } else if(a.key == "rel-port") {
             // ignore
         } else {
-            logger.warn("unhandled attribute ", a.key);
+            LOG_WARN(logger, "unhandled attribute ", a.key);
         }
     }
     ensure(found_component && found_generation && found_port && found_priority && found_type && found_foundation && found_id && found_ip_addr, "required attributes not found");
     for(const auto& c : node.children) {
         if(0) {
         } else {
-            logger.warn("unhandled child ", c.name);
+            LOG_WARN(logger, "unhandled child ", c.name);
         }
     }
     return r;
@@ -377,7 +377,7 @@ auto parse_ice_udp_transport(const xml::Node& node) -> std::optional<Jingle::Con
         } else if(a.key == "xmlns") {
             ensure(a.value == ns::transport_ice_udp, "unsupported xmlns ", a.value);
         } else {
-            logger.warn("unhandled attribute ", a.key);
+            LOG_WARN(logger, "unhandled attribute ", a.key);
         }
     }
     ensure(found_pwd && found_ufrag, "required attributes not found");
@@ -398,7 +398,7 @@ auto parse_ice_udp_transport(const xml::Node& node) -> std::optional<Jingle::Con
         } else if(c.name == "candidate") {
             unwrap_parsed_or_nullopt(parse_candidate(c), r.candidates);
         } else {
-            logger.warn("unhandled child ", c.name);
+            LOG_WARN(logger, "unhandled child ", c.name);
         }
     }
     ensure(found_websocket, "required children not found");
@@ -424,7 +424,7 @@ auto parse_content(const xml::Node& node) -> std::optional<Jingle::Content> {
                 bail("unknown creator ", a.value);
             }
         } else {
-            logger.warn("unhandled attribute ", a.key);
+            LOG_WARN(logger, "unhandled attribute ", a.key);
         }
     }
     ensure(found_name, "required attributes not found");
@@ -434,21 +434,21 @@ auto parse_content(const xml::Node& node) -> std::optional<Jingle::Content> {
                 if(*xmlns == ns::rtp) {
                     unwrap_parsed_or_nullopt(parse_rtp_description(c), r.descriptions);
                 } else {
-                    logger.warn("unknown cowntent type ", *xmlns);
+                    LOG_WARN(logger, "unknown cowntent type ", *xmlns);
                 }
             } else {
-                logger.warn("no xmlns ", *xmlns);
+                LOG_WARN(logger, "no xmlns ", *xmlns);
             }
         } else if(c.name == "transport") {
             if(const auto xmlns = c.find_attr("xmlns"); !xmlns) {
-                logger.warn("no xmlns in transport");
+                LOG_WARN(logger, "no xmlns in transport");
             } else if(*xmlns != ns::transport_ice_udp) {
-                logger.warn("unsupported transport", *xmlns);
+                LOG_WARN(logger, "unsupported transport", *xmlns);
             } else {
                 unwrap_parsed_or_nullopt(parse_ice_udp_transport(c), r.transports);
             }
         } else {
-            logger.warn("unhandled child ", c.name);
+            LOG_WARN(logger, "unhandled child ", c.name);
         }
     }
     return r;
@@ -465,7 +465,7 @@ auto parse_group(const xml::Node& node) -> std::optional<Jingle::Group> {
         } else if(a.key == "xmlns") {
             ensure(a.value == ns::grouping, "unsupported xmlns ", a.value);
         } else {
-            logger.warn("unhandled attribute ", a.key);
+            LOG_WARN(logger, "unhandled attribute ", a.key);
         }
     }
     ensure(found_semantics, "required attributes not found");
@@ -475,7 +475,7 @@ auto parse_group(const xml::Node& node) -> std::optional<Jingle::Group> {
                 r.contents.emplace_back(*name);
             }
         } else {
-            logger.warn("unhandled child ", c.name);
+            LOG_WARN(logger, "unhandled child ", c.name);
         }
     }
     return r;
@@ -501,7 +501,7 @@ auto parse(const xml::Node& node) -> std::optional<Jingle> {
         } else if(a.key == "xmlns") {
             ensure(a.value == ns::jingle, "unsupported xmlns ", a.value);
         } else {
-            logger.warn("unhandled attribute ", a.key);
+            LOG_WARN(logger, "unhandled attribute ", a.key);
         }
     }
     ensure(found_action && found_sid, "required attributes not found");
@@ -514,7 +514,7 @@ auto parse(const xml::Node& node) -> std::optional<Jingle> {
         } else if(c.name == "bridge-session") {
             // ignore
         } else {
-            logger.warn("unhandled child ", c.name);
+            LOG_WARN(logger, "unhandled child ", c.name);
         }
     }
     return r;
