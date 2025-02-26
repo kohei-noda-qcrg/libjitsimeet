@@ -399,6 +399,10 @@ auto handle_received(Conference* const conf) -> Conference::Worker::Generator {
                         .data = codec_type->data(),
                     },
                     xml::Node{
+                        .name = "jitsi_participant_codecList",
+                        .data = codec_type->data(),
+                    },
+                    xml::Node{
                         .name = "videomuted",
                         .data = conf->config.video_muted ? "true" : "false",
                     },
