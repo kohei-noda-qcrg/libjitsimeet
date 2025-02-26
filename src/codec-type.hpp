@@ -5,5 +5,6 @@ enum class CodecType {
     H264,
     Vp8,
     Vp9,
+    Av1,
 };
 

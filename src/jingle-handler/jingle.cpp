@@ -31,6 +31,7 @@ const auto codec_type_str = make_pair_table<CodecType, std::string_view>({
     {CodecType::H264, "H264"},
     {CodecType::Vp8, "VP8"},
     {CodecType::Vp9, "VP9"},
+    {CodecType::Av1, "AV1"},
 });
 
 struct DescriptionParseResult {
