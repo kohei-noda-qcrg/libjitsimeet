@@ -42,7 +42,7 @@ struct DescriptionParseResult {
 };
 
 auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, SSRCMap& ssrc_map) -> std::optional<DescriptionParseResult> {
-    unwrap(source_type, source_type_str.find(desc.media), "unknown media ", desc.media);
+    unwrap(source_type, source_type_str.find(desc.media), "unknown media {}", desc.media);
     auto r = DescriptionParseResult{};
 
     // parse codecs
@@ -59,7 +59,7 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
             };
             r.codecs.push_back(codec);
         } else {
-            LOG_WARN(logger, "unknown codec ", pt.name);
+            LOG_WARN(logger, "unknown codec {}", pt.name);
         }
     }
     // parse retransmission payload types
@@ -73,7 +73,7 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
             }
             const auto apt = from_chars<int>(p.value);
             if(!apt) {
-                LOG_WARN(logger, "invalid apt ", p.value);
+                LOG_WARN(logger, "invalid apt {}", p.value);
                 continue;
             }
             for(auto& codec : r.codecs) {
@@ -99,7 +99,7 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
                 break;
             }
         } else {
-            LOG_WARN(logger, "unsupported rtp header extension ", ext.uri);
+            LOG_WARN(logger, "unsupported rtp header extension {}", ext.uri);
         }
     }
     // parse ssrc
@@ -198,10 +198,10 @@ auto JingleHandler::build_accept_jingle() const -> std::optional<jingle::Jingle>
             rtp_desc.sources.push_back(jingle::Jingle::Content::RTPDescription::Source{.ssrc = session.video_rtx_ssrc});
         }
         const auto stream_id = rng::generate_random_uint32();
-        const auto label     = build_string("stream_label_", stream_id);
-        const auto mslabel   = build_string("multi_stream_label_", stream_id);
-        const auto msid      = mslabel + " " + label;
-        const auto cname     = build_string("cname_", stream_id);
+        const auto label     = std::format("stream_label_{}", stream_id);
+        const auto mslabel   = std::format("multi_stream_label_{}", stream_id);
+        const auto msid      = std::format("{} {}", mslabel, label);
+        const auto cname     = std::format("cname_{}", stream_id);
         for(auto& src : rtp_desc.sources) {
             src.parameters.push_back({"cname", cname});
             src.parameters.push_back({"msid", msid});
@@ -254,7 +254,7 @@ auto JingleHandler::build_accept_jingle() const -> std::optional<jingle::Jingle>
                 .priority   = lc->priority,
                 .type       = type,
                 .foundation = lc->foundation,
-                .id         = build_string("candidate_", candidate_id_serial.fetch_add(1)),
+                .id         = std::format("candidate_{}", candidate_id_serial.fetch_add(1)),
                 .ip_addr    = addr,
             });
         }
@@ -309,13 +309,13 @@ auto JingleHandler::on_initiate(jingle::Jingle jingle) -> bool {
     ensure(cert_der);
     const auto priv_key_der = cert::serialize_private_key_pkcs8_der(cert.get());
     ensure(priv_key_der);
-    const auto fingerprint     = crypto::sha::calc_sha256(*cert_der);
-    auto       fingerprint_str = digest_str(fingerprint);
-    auto       cert_pem        = pem::encode("CERTIFICATE", *cert_der);
-    auto       priv_key_pem    = pem::encode("PRIVATE KEY", *priv_key_der);
-    LOG_DEBUG(logger, "fingerprint: ", fingerprint_str.data());
-    LOG_DEBUG(logger, "cert: ", cert_pem.data());
-    LOG_DEBUG(logger, "priv_key: ", priv_key_pem.data());
+    unwrap(fingerprint, crypto::sha::calc_sha256(*cert_der));
+    auto fingerprint_str = digest_str(fingerprint);
+    auto cert_pem        = pem::encode("CERTIFICATE", *cert_der);
+    auto priv_key_pem    = pem::encode("PRIVATE KEY", *priv_key_der);
+    LOG_DEBUG(logger, "fingerprint: {}", fingerprint_str.data());
+    LOG_DEBUG(logger, "cert: {}", cert_pem.data());
+    LOG_DEBUG(logger, "priv_key: {}", priv_key_pem.data());
 
     const auto audio_ssrc     = rng::generate_random_uint32();
     const auto video_ssrc     = rng::generate_random_uint32();
@@ -357,7 +357,7 @@ auto JingleHandler::on_add_source(jingle::Jingle jingle) -> bool {
             } else if(desc.media == "video") {
                 type = SourceType::Video;
             } else {
-                LOG_WARN(logger, "unknown media ", desc.media);
+                LOG_WARN(logger, "unknown media {}", desc.media);
                 continue;
             }
             for(const auto& src : desc.sources) {

@@ -6,6 +6,7 @@
 #include "macros/logger.hpp"
 #include "random.hpp"
 #include "util/pair-table.hpp"
+#include "util/span.hpp"
 #include "util/split.hpp"
 #include "xmpp/elements.hpp"
 #include "json/json.hpp"
@@ -17,12 +18,8 @@ namespace conference {
 namespace {
 auto logger = Logger("conference");
 
-auto to_span(const std::string_view str) -> std::span<std::byte> {
-    return std::span<std::byte>(std::bit_cast<std::byte*>(str.data()), str.size());
-}
-
 auto replace(std::string str, const std::string_view from, const std::string_view to) -> std::string {
-    auto pos = size_t(0);
+    auto pos = 0uz;
 
 loop:
     pos = str.find(from, pos);
@@ -157,14 +154,14 @@ auto handle_iq_set(Conference* const conf, const xml::Node& iq) -> bool {
     unwrap(from, iq.find_attr("from"));
     unwrap(from_jid, xmpp::Jid::parse(from));
     if(from_jid.resource != "focus") {
-        LOG_WARN(logger, "ignoring iq from ", from_jid.resource);
+        LOG_WARN(logger, "ignoring iq from {}", from_jid.resource);
         return true;
     }
     unwrap(id, iq.find_attr("id"));
     unwrap(jingle_node, iq.find_first_child("jingle"));
     unwrap_mut(jingle, jingle::parse(jingle_node));
 
-    LOG_DEBUG(logger, "jingle action ", int(jingle.action));
+    LOG_DEBUG(logger, "jingle action {}", std::to_underlying(jingle.action));
     switch(jingle.action) {
     case jingle::Jingle::Action::SessionInitiate:
         conf->callbacks->on_jingle_initiate(std::move(jingle));
@@ -173,7 +170,7 @@ auto handle_iq_set(Conference* const conf, const xml::Node& iq) -> bool {
         conf->callbacks->on_jingle_add_source(std::move(jingle));
         goto ack;
     default:
-        LOG_WARN(logger, "unimplemented jingle action: ", int(jingle.action));
+        LOG_WARN(logger, "unimplemented jingle action {}", std::to_underlying(jingle.action));
         return true;
     }
 
@@ -196,7 +193,7 @@ auto handle_iq_result(Conference* const conf, const xml::Node& iq, bool success)
             continue;
         }
         if(!success) {
-            LOG_ERROR(logger, "iq ", id, " failed");
+            LOG_ERROR(logger, "iq {} failed", id);
         }
         if(i->on_result) {
             i->on_result(success);
@@ -218,7 +215,7 @@ auto handle_iq(Conference* const conf, const xml::Node& iq) -> bool {
     } else if(type == "error") {
         return handle_iq_result(conf, iq, false);
     } else {
-        bail("unknown iq type ", type);
+        bail("unknown iq type {}", type);
     }
 }
 
@@ -227,7 +224,7 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
 
     unwrap(from_str, presence.find_attr("from"));
     unwrap(from, xmpp::Jid::parse(from_str));
-    LOG_DEBUG(logger, "got presence from ", from_str);
+    LOG_DEBUG(logger, "got presence from {}", from_str);
     if(const auto type = presence.find_attr("type"); type) {
         if(*type == "unavailable") {
             if(const auto i = conf->participants.find(from.resource); i != conf->participants.end()) {
@@ -274,7 +271,7 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
             } else if(payload.data == "false") {
                 muted = false;
             } else {
-                LOG_WARN(logger, "unknown {audio,video}muted data: ", payload.data);
+                LOG_WARN(logger, "unknown {{audio,video}}muted data: {}", payload.data);
             }
             (payload.name == "audiomuted" ? audio_muted : video_muted).emplace(muted);
         } else if(payload.name == "SourceInfo") {
@@ -299,7 +296,7 @@ auto handle_presence(Conference* const conf, const xml::Node& presence) -> bool 
                 } else if(source_name == participant->participant_id + "-v0") {
                     video_muted.emplace(v->value);
                 } else {
-                    LOG_WARN(logger, "unsupported source name format: ", source_name);
+                    LOG_WARN(logger, "unsupported source name format: {}", source_name);
                     continue;
                 }
             }
@@ -333,7 +330,7 @@ auto handle_received(Conference* const conf) -> Conference::Worker::Generator {
     // disco
     {
         const auto id   = conf->generate_iq_id();
-        const auto muid = build_string("muid_", rng::generate_random_uint32());
+        const auto muid = std::format("muid_{}", rng::generate_random_uint32());
         const auto iq   = xmpp::elm::iq.clone()
                             .append_attrs({
                                 {"to", conf->config.get_focus_jid().as_full()},
@@ -432,7 +429,7 @@ loop:
         } else if(response.name == "presence") {
             yield = handle_presence(conf, response);
         } else {
-            LOG_WARN(logger, "not implemented xmpp message ", response.name);
+            LOG_WARN(logger, "not implemented xmpp message {}", response.name);
         }
     } while(0);
     co_yield yield;
@@ -451,7 +448,7 @@ auto Config::get_focus_jid() const -> xmpp::Jid {
 auto Config::get_muc_jid() const -> xmpp::Jid {
     return xmpp::Jid{
         .node     = room,
-        .domain   = build_string("conference.") + jid.domain,
+        .domain   = std::string("conference.") + jid.domain,
         .resource = "",
     };
 }
@@ -469,7 +466,7 @@ auto Config::get_muc_local_focus_jid() const -> xmpp::Jid {
 }
 
 auto Conference::generate_iq_id() -> std::string {
-    return build_string("iq_", (iq_serial += 1));
+    return std::format("iq_{}", (iq_serial += 1));
 }
 
 auto Conference::start_negotiation() -> void {
@@ -500,8 +497,8 @@ auto Conference::create(Config config, ConferenceCallbacks* const callbacks) -> 
     };
 
     unwrap(disco_str, compute_disco_str(disco_info));
-    const auto disco_sha1     = crypto::sha::calc_sha1(to_span(disco_str));
-    const auto disco_sha256   = crypto::sha::calc_sha256(to_span(disco_str));
+    unwrap(disco_sha1, crypto::sha::calc_sha1(to_span(disco_str)));
+    unwrap(disco_sha256, crypto::sha::calc_sha256(to_span(disco_str)));
     conf->disco_sha1_base64   = crypto::base64::encode(disco_sha1);
     conf->disco_sha256_base64 = crypto::base64::encode(disco_sha256);
 

@@ -16,7 +16,7 @@ auto compute_disco_str(const xml::Node& disco) -> std::optional<std::string> {
             {"xml:lang", lang},
             {"name", name},
         }));
-        r += build_string(category, "/", type, "/", lang, "/", name, "<");
+        r += std::format("{}/{}/{}/{}<", category, type, lang, name);
     }
     // TODO: sort items
     for(const auto& c : disco.children) {

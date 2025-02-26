@@ -43,7 +43,7 @@ auto parse_service(const xml::Node& node) -> std::optional<Service> {
                 bail("unknown restricted");
             }
         } else {
-            LOG_WARN(logger, "unhandled attribute ", a.key);
+            LOG_WARN(logger, "unhandled attribute {}", a.key);
         }
     }
     if(!found_type || !found_host) {
@@ -52,7 +52,7 @@ auto parse_service(const xml::Node& node) -> std::optional<Service> {
     for(const auto& c : node.children) {
         if(0) {
         } else {
-            LOG_WARN(logger, "unhandled child ", c.name);
+            LOG_WARN(logger, "unhandled child {}", c.name);
         }
     }
     return r;

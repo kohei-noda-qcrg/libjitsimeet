@@ -13,7 +13,6 @@
 #include "macros/assert.hpp"
 #include "util/argument-parser.hpp"
 #include "util/assert.hpp"
-#include "util/print.hpp"
 #include "util/span.hpp"
 #include "xmpp/elements.hpp"
 #include "xmpp/negotiator.hpp"
@@ -70,7 +69,7 @@ auto async_main(const int argc, const char* const argv[]) -> coop::Async<int> {
         parser.kwflag(&secure, {"-s"}, "allow self-signed ssl certificate", {.invert_flag_value = true});
         parser.kwflag(&help, {"-h", "--help"}, "print this help message", {.no_error_check = true});
         if(!parser.parse(argc, argv) || help) {
-            print("usage: example ", parser.get_help());
+            std::println("usage: example {}", parser.get_help());
             co_return 0;
         }
     }
@@ -81,7 +80,7 @@ auto async_main(const int argc, const char* const argv[]) -> coop::Async<int> {
         injector,
         {
             .address   = host,
-            .path      = build_string("xmpp-websocket?room=", room).data(),
+            .path      = std::format("xmpp-websocket?room={}", room).data(),
             .protocol  = "xmpp",
             .port      = 443,
             .ssl_level = secure ? ws::client::SSLLevel::Enable : ws::client::SSLLevel::TrustSelfSigned,

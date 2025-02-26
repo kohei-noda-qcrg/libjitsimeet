@@ -20,7 +20,7 @@ auto find_transport(const jingle::Jingle& jingle) -> const jingle::Jingle::Conte
 } // namespace
 
 auto Colibri::set_last_n(const int n) -> void {
-    const auto payload = build_string(R"({"colibriClass":"ReceiverVideoConstraints","lastN":)", n, "}");
+    const auto payload = std::format(R"({{"colibriClass":"ReceiverVideoConstraints","lastN":{}}})", n);
     ensure(ws_context.send(payload));
 }
 
@@ -30,7 +30,7 @@ Colibri::~Colibri() {
 auto Colibri::connect(const jingle::Jingle& initiate_jingle, const bool secure) -> std::unique_ptr<Colibri> {
     unwrap(transport, find_transport(initiate_jingle));
     unwrap(ws_uri, URI::parse(transport.websocket));
-    LOG_INFO(logger, "connecting to colibri at ", transport.websocket);
+    LOG_INFO(logger, "connecting to colibri at {}", transport.websocket);
 
     const auto uri_domain = std::string(ws_uri.domain);
     const auto uri_path   = std::string(ws_uri.path);

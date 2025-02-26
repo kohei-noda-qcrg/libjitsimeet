@@ -27,9 +27,9 @@ auto set_stun_turn(NiceAgent* const                     agent,
     for(const auto& es : external_services) {
         if(!stun && es.type == "stun") {
             const auto hostaddr = hostname_to_addr(es.host.data());
-            ensure(!hostaddr.empty(), "failed to resolve stun server address ", es.host);
+            ensure(!hostaddr.empty(), "failed to resolve stun server address {}", es.host);
             const auto port = es.port != 0 ? es.port : default_stun_port;
-            LOG_DEBUG(logger, "stun address: ", hostaddr, ":", port);
+            LOG_DEBUG(logger, "stun address: {}:{}", hostaddr, port);
             g_object_set(agent,
                          "stun-server", hostaddr.data(),
                          "stun-server-port", port,
@@ -37,9 +37,9 @@ auto set_stun_turn(NiceAgent* const                     agent,
             stun = true;
         } else if(!turn && es.type == "turns") {
             const auto hostaddr = hostname_to_addr(es.host.data());
-            ensure(!hostaddr.empty(), "failed to resolve turn server address ", es.host);
+            ensure(!hostaddr.empty(), "failed to resolve turn server address {}", es.host);
             const auto port = es.port != 0 ? es.port : default_turn_port;
-            LOG_DEBUG(logger, "turn address: ", hostaddr, ":", port);
+            LOG_DEBUG(logger, "turn address: {}:{}", hostaddr, port);
             if(nice_agent_set_relay_info(agent,
                                          stream_id,
                                          component_id,
@@ -60,7 +60,7 @@ auto set_stun_turn(NiceAgent* const                     agent,
 }
 
 auto agent_recv_callback(NiceAgent* const /*agent*/, const guint /*stream_id*/, const guint /*component_id*/, const guint /*len*/, gchar* const buf, const gpointer /*user_data*/) -> void {
-    LOG_DEBUG(logger, "agent-recv: ", buf);
+    LOG_DEBUG(logger, "agent-recv: {}", buf);
 }
 
 auto candidate_gathering_done(NiceAgent* const /*agent*/, const guint /*stream_id*/, const gpointer /*user_data*/) -> void {

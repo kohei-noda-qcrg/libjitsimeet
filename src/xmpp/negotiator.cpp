@@ -90,7 +90,7 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
             self.jid = std::move(jid);
             break;
         }
-        LOG_DEBUG(logger, "jid: ", self.jid.as_full());
+        LOG_DEBUG(logger, "jid: {}", self.jid.as_full());
     }
     // disco
     {
@@ -158,7 +158,7 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
 } // namespace
 
 auto Negotiator::generate_iq_id() -> std::string {
-    return build_string("iq_", (iq_serial += 1));
+    return std::format("iq_{}", (iq_serial += 1));
 }
 
 auto Negotiator::start_negotiation() -> void {
