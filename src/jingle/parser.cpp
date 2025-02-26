@@ -149,6 +149,8 @@ auto parse_source(const xml::Node& node) -> std::optional<Jingle::Content::RTPDe
             ensure(a.value == ns::rtp_ssma, "unsupported xmlns {}", a.value);
         } else if(a.key == "name") {
             r.name = a.value;
+        } else if(a.key == "videoType") {
+            r.video_type = a.value;
         } else {
             LOG_WARN(logger, "unhandled attribute {}", a.key);
         }
