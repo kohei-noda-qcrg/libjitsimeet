@@ -55,6 +55,20 @@ struct ConferenceCallbacks : public conference::ConferenceCallbacks {
     }
 };
 
+auto pinger_main(conference::Conference& conference) -> coop::Async<void> {
+    static const auto iq = xmpp::elm::iq.clone()
+                               .append_attrs({
+                                   {"type", "get"},
+                               })
+                               .append_children({
+                                   xmpp::elm::ping,
+                               });
+loop:
+    conference.send_iq(iq, {});
+    co_await coop::sleep(std::chrono::seconds(10));
+    goto loop;
+}
+
 auto async_main(const int argc, const char* const argv[]) -> coop::Async<int> {
     constexpr auto error_value = -1;
 
@@ -163,19 +177,13 @@ auto async_main(const int argc, const char* const argv[]) -> coop::Async<int> {
         auto colibri = colibri::Colibri::connect(jingle_handler.get_session().initiate_jingle, secure);
         colibri->set_last_n(5);
 
-        while(true) {
-            const auto iq = xmpp::elm::iq.clone()
-                                .append_attrs({
-                                    {"type", "get"},
-                                })
-                                .append_children({
-                                    xmpp::elm::ping,
-                                });
-            conference->send_iq(iq, {});
-            co_await coop::sleep(std::chrono::seconds(10));
-        }
+        auto ping_task = coop::TaskHandle();
+        co_await coop::run_args(pinger_main(*conference)).detach({&ping_task});
+        co_await ws_context.disconnected;
+        ping_task.cancel();
     }
     ws_task.cancel();
+    co_return 0;
 }
 } // namespace
 
