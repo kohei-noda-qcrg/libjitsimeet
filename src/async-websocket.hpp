@@ -1,5 +1,6 @@
 #pragma once
 #include <coop/generator.hpp>
+#include <coop/single-event.hpp>
 #include <coop/task-injector.hpp>
 
 #include "ws/client.hpp"
