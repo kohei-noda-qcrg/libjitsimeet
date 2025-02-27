@@ -162,19 +162,11 @@ auto handle_iq_set(Conference* const conf, const xml::Node& iq) -> bool {
     unwrap_mut(jingle, jingle::parse(jingle_node));
 
     LOG_DEBUG(logger, "jingle action {}", std::to_underlying(jingle.action));
-    switch(jingle.action) {
-    case jingle::Jingle::Action::SessionInitiate:
-        conf->callbacks->on_jingle_initiate(std::move(jingle));
-        goto ack;
-    case jingle::Jingle::Action::SourceAdd:
-        conf->callbacks->on_jingle_add_source(std::move(jingle));
-        goto ack;
-    default:
-        LOG_WARN(logger, "unimplemented jingle action {}", std::to_underlying(jingle.action));
+    if(!conf->callbacks->on_jingle(std::move(jingle))) {
+        LOG_WARN(logger, "failed to process jingle action=", std::to_underlying(jingle.action));
         return true;
     }
 
-ack:
     const auto iqr = xmpp::elm::iq.clone()
                          .append_attrs({
                              {"from", conf->config.jid.as_full()},

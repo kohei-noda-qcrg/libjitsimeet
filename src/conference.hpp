@@ -18,11 +18,7 @@ struct Participant {
 struct ConferenceCallbacks {
     virtual auto send_payload(std::string_view /*payload*/) -> void = 0;
 
-    virtual auto on_jingle_initiate(jingle::Jingle /*jingle*/) -> bool {
-        return true;
-    }
-
-    virtual auto on_jingle_add_source(jingle::Jingle /*jingle*/) -> bool {
+    virtual auto on_jingle(jingle::Jingle /*jingle*/) -> bool {
         return true;
     }
 

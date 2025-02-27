@@ -34,12 +34,17 @@ struct ConferenceCallbacks : public conference::ConferenceCallbacks {
         ensure(ws_context->send(payload));
     }
 
-    virtual auto on_jingle_initiate(jingle::Jingle jingle) -> bool override {
-        return jingle_handler->on_initiate(std::move(jingle));
-    }
-
-    virtual auto on_jingle_add_source(jingle::Jingle jingle) -> bool override {
-        return jingle_handler->on_add_source(std::move(jingle));
+    virtual auto on_jingle(jingle::Jingle jingle) -> bool override {
+        switch(jingle.action) {
+        case jingle::Jingle::Action::SessionInitiate:
+            return jingle_handler->on_initiate(std::move(jingle));
+        case jingle::Jingle::Action::SourceAdd:
+            return jingle_handler->on_add_source(std::move(jingle));
+        case jingle::Jingle::Action::SessionTerminate:
+            return true; // TODO: implement terminate
+        default:
+            bail("unimplemented jingle action {}", std::to_underlying(jingle.action));
+        }
     }
 
     virtual auto on_participant_joined(const conference::Participant& participant) -> void override {
