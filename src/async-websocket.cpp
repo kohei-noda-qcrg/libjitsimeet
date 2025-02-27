@@ -14,5 +14,6 @@ auto AsyncContext::process_until_finish() -> coop::Async<void> {
     while(state == ws::client::State::Connected) {
         co_await coop::run_blocking([this]() { process(); });
     }
+    disconnected.notify();
 }
 } // namespace ws::client

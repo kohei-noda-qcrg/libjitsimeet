@@ -9,6 +9,7 @@ using OnDataReceivedAsync = coop::Async<void>(std::span<const std::byte> payload
 
 struct AsyncContext : Context {
     std::function<OnDataReceivedAsync> handler;
+    coop::SingleEvent                  disconnected;
 
     auto init(coop::TaskInjector& injector, const ContextParams& params) -> bool;
     auto process_until_finish() -> coop::Async<void>;
