@@ -41,7 +41,8 @@ struct ConferenceCallbacks : public conference::ConferenceCallbacks {
         case jingle::Jingle::Action::SourceAdd:
             return jingle_handler->on_add_source(std::move(jingle));
         case jingle::Jingle::Action::SessionTerminate:
-            return true; // TODO: implement terminate
+            ws_context->shutdown();
+            return true;
         default:
             bail("unimplemented jingle action {}", std::to_underlying(jingle.action));
         }
