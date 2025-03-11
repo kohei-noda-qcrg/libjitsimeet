@@ -163,7 +163,7 @@ auto handle_iq_set(Conference* const conf, const xml::Node& iq) -> bool {
 
     LOG_DEBUG(logger, "jingle action {}", std::to_underlying(jingle.action));
     if(!conf->callbacks->on_jingle(std::move(jingle))) {
-        LOG_WARN(logger, "failed to process jingle action=", std::to_underlying(jingle.action));
+        LOG_WARN(logger, "failed to process jingle action={}", std::to_underlying(jingle.action));
         return true;
     }
 
