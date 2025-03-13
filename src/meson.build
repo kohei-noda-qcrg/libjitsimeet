@@ -5,6 +5,7 @@ subdir('ws')
 libjitsimeet_deps = [
   dependency('openssl'),
   dependency('nice'),
+  dependency('coop'),
 ] + ws_deps
 
 libjitsimeet_src = files(
