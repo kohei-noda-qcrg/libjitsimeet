@@ -95,7 +95,6 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
     // disco
     {
         const auto id        = self.generate_iq_id();
-        const auto focus_jid = Jid{"focus", std::string("auth.") + self.host, "focus"};
         const auto iq        = xmpp::elm::iq.clone()
                             .append_attrs({
                                 {"id", id},
