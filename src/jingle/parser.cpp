@@ -447,7 +447,9 @@ auto parse_content(const xml::Node& node) -> std::optional<Jingle::Content> {
             } else if(*xmlns != ns::transport_ice_udp) {
                 LOG_WARN(logger, "unsupported transport{}", *xmlns);
             } else {
-                unwrap_parsed_or_nullopt(parse_ice_udp_transport(c), r.transports);
+                if(auto opt = parse_ice_udp_transport(c)) {
+                    r.transports.push_back(std::move(*opt));
+                }
             }
         } else {
             LOG_WARN(logger, "unhandled child {}", c.name);

@@ -94,9 +94,8 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
     }
     // disco
     {
-        const auto id        = self.generate_iq_id();
-        const auto focus_jid = Jid{"focus", std::string("auth.") + self.host, "focus"};
-        const auto iq        = xmpp::elm::iq.clone()
+        const auto id = self.generate_iq_id();
+        const auto iq = xmpp::elm::iq.clone()
                             .append_attrs({
                                 {"id", id},
                                 {"type", "get"},
@@ -144,7 +143,10 @@ auto negotiate(Negotiator* const negotiator) -> Negotiator::Worker::Generator {
                 continue;
             }
             co_ensure_v(response.is_attr_equal("id", id), "unexpected iq");
-            co_ensure_v(response.is_attr_equal("type", "result"), "unexpected iq");
+            if(!response.is_attr_equal("type", "result")) {
+                LOG_WARN(logger, "extdisco not supported");
+                break;
+            }
             co_unwrap_v(services, response.find_first_child("services"));
             co_ensure_v(services.is_attr_equal("xmlns", xmpp::ns::xmpp_extdisco));
             if(auto sv_o = parse_services(services); sv_o) {

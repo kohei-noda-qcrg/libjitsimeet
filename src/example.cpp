@@ -181,7 +181,9 @@ auto async_main(const int argc, const char* const argv[]) -> coop::Async<int> {
         }
 
         auto colibri = colibri::Colibri::connect(jingle_handler.get_session().initiate_jingle, secure);
-        colibri->set_last_n(5);
+        if(colibri) {
+            colibri->set_last_n(5);
+        }
 
         auto ping_task = coop::TaskHandle();
         co_await coop::run_args(pinger_main(*conference)).detach({&ping_task});
