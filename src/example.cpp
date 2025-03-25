@@ -36,11 +36,11 @@ struct ConferenceCallbacks : public conference::ConferenceCallbacks {
 
     virtual auto on_jingle(jingle::Jingle jingle) -> bool override {
         switch(jingle.action) {
-        case jingle::Jingle::Action::SessionInitiate:
+        case jingle::Action::SessionInitiate:
             return jingle_handler->on_initiate(std::move(jingle));
-        case jingle::Jingle::Action::SourceAdd:
+        case jingle::Action::SourceAdd:
             return jingle_handler->on_add_source(std::move(jingle));
-        case jingle::Jingle::Action::SessionTerminate:
+        case jingle::Action::SessionTerminate:
             ws_context->shutdown();
             return true;
         default:
@@ -172,7 +172,7 @@ auto async_main(const int argc, const char* const argv[]) -> coop::Async<int> {
                                      {"type", "set"},
                                  })
                                  .append_children({
-                                     jingle::deparse(accept),
+                                     *jingle::deparse(accept),
                                  });
 
             conference->send_iq(std::move(accept_iq), [](bool success) -> void {

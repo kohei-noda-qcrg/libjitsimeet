@@ -67,24 +67,24 @@ auto candidate_gathering_done(NiceAgent* const /*agent*/, const guint /*stream_i
     LOG_DEBUG(logger, "candidate-gathering-done");
 }
 
-auto candidate_type_conv_table = std::array<std::pair<jingle::Jingle::Content::IceUdpTransport::Candidate::Type, NiceCandidateType>, 4>{{
-    {jingle::Jingle::Content::IceUdpTransport::Candidate::Type::Host, NiceCandidateType::NICE_CANDIDATE_TYPE_HOST},
-    {jingle::Jingle::Content::IceUdpTransport::Candidate::Type::Srflx, NiceCandidateType::NICE_CANDIDATE_TYPE_SERVER_REFLEXIVE},
-    {jingle::Jingle::Content::IceUdpTransport::Candidate::Type::Prflx, NiceCandidateType::NICE_CANDIDATE_TYPE_PEER_REFLEXIVE},
-    {jingle::Jingle::Content::IceUdpTransport::Candidate::Type::Relay, NiceCandidateType::NICE_CANDIDATE_TYPE_RELAYED},
+auto candidate_type_conv_table = std::array<std::pair<jingle::CandidateType, NiceCandidateType>, 4>{{
+    {jingle::CandidateType::Host, NiceCandidateType::NICE_CANDIDATE_TYPE_HOST},
+    {jingle::CandidateType::Srflx, NiceCandidateType::NICE_CANDIDATE_TYPE_SERVER_REFLEXIVE},
+    {jingle::CandidateType::Prflx, NiceCandidateType::NICE_CANDIDATE_TYPE_PEER_REFLEXIVE},
+    {jingle::CandidateType::Relay, NiceCandidateType::NICE_CANDIDATE_TYPE_RELAYED},
 }};
 
-auto set_remote_candidates(NiceAgent* const                                agent,
-                           const jingle::Jingle::Content::IceUdpTransport& transport,
-                           const guint                                     stream_id,
-                           const guint                                     component_id) -> bool {
+auto set_remote_candidates(NiceAgent* const               agent,
+                           const jingle::IceUdpTransport& transport,
+                           const guint                    stream_id,
+                           const guint                    component_id) -> bool {
 
     auto r    = true;
     auto list = (GSList*)(NULL);
-    for(const auto& tc : transport.candidates) {
+    for(const auto& tc : transport.candidate) {
         unwrap(type, candidate_type_to_nice(tc.type));
         auto nc = nice_candidate_new(type);
-        if(const auto addr = str_to_sockaddr(tc.ip_addr.data(), tc.port); addr.s.addr.sa_family != AF_UNSPEC) {
+        if(const auto addr = str_to_sockaddr(tc.ip.data(), tc.port); addr.s.addr.sa_family != AF_UNSPEC) {
             nc->addr = addr;
         } else {
             LOG_ERROR(logger, "failed to parse candidate ip address");
@@ -100,7 +100,7 @@ auto set_remote_candidates(NiceAgent* const                                agent
 
         list = g_slist_prepend(list, nc);
     }
-    if(nice_agent_set_remote_candidates(agent, stream_id, component_id, list) != int(transport.candidates.size())) {
+    if(nice_agent_set_remote_candidates(agent, stream_id, component_id, list) != int(transport.candidate.size())) {
         LOG_ERROR(logger, "failed to add candidates");
         r = false;
         goto end;
@@ -131,8 +131,8 @@ MainloopWithRunner::~MainloopWithRunner() {
     }
 }
 
-auto setup(const std::span<const xmpp::Service>                  external_services,
-           const jingle::Jingle::Content::IceUdpTransport* const transport) -> std::optional<Agent> {
+auto setup(const std::span<const xmpp::Service> external_services,
+           const jingle::IceUdpTransport* const transport) -> std::optional<Agent> {
     auto mainloop = AutoMainloop(MainloopWithRunner::create());
     ensure(mainloop.get() != nullptr);
     const auto mainloop_ctx = g_main_loop_get_context(mainloop->mainloop.get());
@@ -224,7 +224,7 @@ auto sockaddr_to_port(const NiceAddress& addr) -> uint16_t {
     }
 }
 
-auto candidate_type_to_nice(const jingle::Jingle::Content::IceUdpTransport::Candidate::Type type) -> std::optional<NiceCandidateType> {
+auto candidate_type_to_nice(const jingle::CandidateType type) -> std::optional<NiceCandidateType> {
     for(const auto& c : candidate_type_conv_table) {
         if(c.first == type) {
             return c.second;
@@ -233,7 +233,7 @@ auto candidate_type_to_nice(const jingle::Jingle::Content::IceUdpTransport::Cand
     return std::nullopt;
 }
 
-auto candidate_type_from_nice(const NiceCandidateType type) -> std::optional<jingle::Jingle::Content::IceUdpTransport::Candidate::Type> {
+auto candidate_type_from_nice(const NiceCandidateType type) -> std::optional<jingle::CandidateType> {
     for(const auto& c : candidate_type_conv_table) {
         if(c.second == type) {
             return c.first;

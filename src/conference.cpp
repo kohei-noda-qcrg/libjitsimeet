@@ -129,7 +129,7 @@ auto handle_iq_get(Conference* const conf, const xml::Node& iq) -> bool {
                        {"type", "result"},
                    });
     const auto node = query.find_attr("node");
-    if(node.has_value()) {
+    if(node) {
         const auto sep = node->rfind("#");
         ensure(sep != std::string::npos);
         const auto uri  = node->substr(0, sep);

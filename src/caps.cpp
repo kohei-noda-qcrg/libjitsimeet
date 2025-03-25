@@ -21,7 +21,8 @@ auto compute_disco_str(const xml::Node& disco) -> std::optional<std::string> {
     // TODO: sort items
     for(const auto& c : disco.children) {
         if(c.name == "feature") {
-            r += c.find_attr("var").value();
+            unwrap(var, c.find_attr("var"));
+            r += var;
             r += "<";
         }
     }

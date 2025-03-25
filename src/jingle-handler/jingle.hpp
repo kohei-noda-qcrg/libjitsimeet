@@ -10,13 +10,11 @@
 #include "ice.hpp"
 
 struct Codec {
-    using RTCPFeedBack = jingle::Jingle::Content::RTPDescription::PayloadType::RTCPFeedBack;
-
     CodecType type;
     int       tx_pt;
     int       rtx_pt = -1;
 
-    std::vector<RTCPFeedBack> rtcp_fbs;
+    std::vector<jingle::RTCPFeedBack> rtcp_fbs;
 };
 
 constexpr auto rtp_hdrext_ssrc_audio_level_uri = "urn:ietf:params:rtp-hdrext:ssrc-audio-level";

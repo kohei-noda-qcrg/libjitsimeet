@@ -42,33 +42,35 @@ struct DescriptionParseResult {
     int audio_hdrext_ssrc_audio_level = -1;
 };
 
-auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, SSRCMap& ssrc_map) -> std::optional<DescriptionParseResult> {
-    unwrap(source_type, source_type_str.find(desc.media), "unknown media {}", desc.media);
+auto parse_rtp_description(const jingle::RTPDescription& desc, SSRCMap& ssrc_map) -> std::optional<DescriptionParseResult> {
+    unwrap(media, desc.media);
+    unwrap(source_type, source_type_str.find(media), "unknown media {}", media);
     auto r = DescriptionParseResult{};
 
     // parse codecs
-    for(const auto& pt : desc.payload_types) {
+    for(const auto& pt : desc.payload_type) {
         if(pt.name == "rtx") {
             continue;
         }
-        if(const auto e = codec_type_str.find(pt.name); e != nullptr) {
+        unwrap(name, pt.name);
+        if(const auto e = codec_type_str.find(name); e != nullptr) {
             auto codec = Codec{
                 .type     = *e,
                 .tx_pt    = pt.id,
                 .rtx_pt   = -1,
-                .rtcp_fbs = pt.rtcp_fbs,
+                .rtcp_fbs = pt.rtcp_fb,
             };
             r.codecs.push_back(codec);
         } else {
-            LOG_WARN(logger, "unknown codec {}", pt.name);
+            LOG_WARN(logger, "unknown codec {}", name);
         }
     }
     // parse retransmission payload types
-    for(const auto& pt : desc.payload_types) {
+    for(const auto& pt : desc.payload_type) {
         if(pt.name != "rtx") {
             continue;
         }
-        for(const auto& p : pt.parameters) {
+        for(const auto& p : pt.parameter) {
             if(p.name != "apt") {
                 continue;
             }
@@ -87,7 +89,7 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
         }
     }
     // parse extensions
-    for(const auto& ext : desc.rtp_header_exts) {
+    for(const auto& ext : desc.rtp_header_ext) {
         if(ext.uri == rtp_hdrext_ssrc_audio_level_uri) {
             r.audio_hdrext_ssrc_audio_level = ext.id;
         } else if(ext.uri == rtp_hdrext_transport_cc_uri) {
@@ -104,11 +106,11 @@ auto parse_rtp_description(const jingle::Jingle::Content::RTPDescription& desc, 
         }
     }
     // parse ssrc
-    for(const auto& source : desc.sources) {
+    for(const auto& source : desc.source) {
         ssrc_map[source.ssrc] = Source{
             .ssrc           = source.ssrc,
             .type           = source_type,
-            .participant_id = source.owner,
+            .participant_id = source.ssrc_info[0].owner,
         };
     }
     return r;
@@ -153,7 +155,7 @@ auto JingleHandler::build_accept_jingle() const -> std::optional<jingle::Jingle>
     auto& jingle = session.initiate_jingle;
 
     auto accept = jingle::Jingle{
-        .action    = jingle::Jingle::Action::SessionAccept,
+        .action    = jingle::Action::SessionAccept,
         .sid       = jingle.sid,
         .initiator = jingle.initiator,
         .responder = jid.as_full(),
@@ -164,79 +166,78 @@ auto JingleHandler::build_accept_jingle() const -> std::optional<jingle::Jingle>
         const auto main_ssrc  = is_audio ? session.audio_ssrc : session.video_ssrc;
 
         // build rtp description
-        auto rtp_desc = jingle::Jingle::Content::RTPDescription{
-            .media       = is_audio ? "audio" : "video",
-            .ssrc        = main_ssrc,
-            .support_mux = true,
+        auto rtp_desc = jingle::RTPDescription{
+            .media = is_audio ? "audio" : "video",
+            .ssrc  = main_ssrc,
         };
         // append payload type
         unwrap(codec, session.find_codec_by_type(codec_type));
-        rtp_desc.payload_types.push_back(jingle::Jingle::Content::RTPDescription::PayloadType{
+        rtp_desc.payload_type.push_back(jingle::PayloadType{
             .id        = codec.tx_pt,
             .clockrate = is_audio ? 48000 : 90000,
-            .channels  = is_audio ? 2 : -1,
+            .channels  = is_audio ? std::optional(2) : std::nullopt,
             .name      = std::string(*codec_type_str.find(codec_type)),
-            .rtcp_fbs  = codec.rtcp_fbs,
+            .rtcp_fb   = codec.rtcp_fbs,
         });
         if(codec.rtx_pt != -1) {
-            auto rtx_pt = jingle::Jingle::Content::RTPDescription::PayloadType{
-                .id         = codec.rtx_pt,
-                .clockrate  = is_audio ? 48000 : 90000,
-                .channels   = is_audio ? 2 : -1,
-                .name       = "rtx",
-                .parameters = {{"apt", std::to_string(codec.tx_pt)}},
+            auto rtx_pt = jingle::PayloadType{
+                .id        = codec.rtx_pt,
+                .clockrate = is_audio ? 48000 : 90000,
+                .channels  = is_audio ? std::optional(2) : std::nullopt,
+                .name      = "rtx",
+                .parameter = {{"apt", std::to_string(codec.tx_pt)}},
             };
             for(const auto& fb : codec.rtcp_fbs) {
                 if(fb.type != "transport-cc") {
-                    rtx_pt.rtcp_fbs.push_back(fb);
+                    rtx_pt.rtcp_fb.push_back(fb);
                 }
             }
-            rtp_desc.payload_types.push_back(std::move(rtx_pt));
+            rtp_desc.payload_type.push_back(std::move(rtx_pt));
         }
         // append source
-        rtp_desc.sources.push_back(jingle::Jingle::Content::RTPDescription::Source{.ssrc = main_ssrc});
+        rtp_desc.source.push_back(jingle::Source{.ssrc = main_ssrc});
         if(!is_audio) {
-            rtp_desc.sources.push_back(jingle::Jingle::Content::RTPDescription::Source{.ssrc = session.video_rtx_ssrc});
+            rtp_desc.source.push_back(jingle::Source{.ssrc = session.video_rtx_ssrc});
         }
         const auto stream_id = rng::generate_random_uint32();
         const auto label     = std::format("stream_label_{}", stream_id);
         const auto mslabel   = std::format("multi_stream_label_{}", stream_id);
         const auto msid      = std::format("{} {}", mslabel, label);
         const auto cname     = std::format("cname_{}", stream_id);
-        for(auto& src : rtp_desc.sources) {
-            src.parameters.push_back({"cname", cname});
-            src.parameters.push_back({"msid", msid});
+        for(auto& src : rtp_desc.source) {
+            src.parameter.push_back({"cname", cname});
+            src.parameter.push_back({"msid", msid});
         }
         // append hdrext
         if(is_audio) {
-            rtp_desc.rtp_header_exts.push_back(
-                jingle::Jingle::Content::RTPDescription::RTPHeaderExt{
+            rtp_desc.rtp_header_ext.push_back(
+                jingle::RTPHeaderExt{
                     .id  = session.audio_hdrext_ssrc_audio_level,
                     .uri = rtp_hdrext_ssrc_audio_level_uri,
                 });
-            rtp_desc.rtp_header_exts.push_back(
-                jingle::Jingle::Content::RTPDescription::RTPHeaderExt{
+            rtp_desc.rtp_header_ext.push_back(
+                jingle::RTPHeaderExt{
                     .id  = session.audio_hdrext_transport_cc,
                     .uri = rtp_hdrext_transport_cc_uri,
                 });
         } else {
-            rtp_desc.rtp_header_exts.push_back(
-                jingle::Jingle::Content::RTPDescription::RTPHeaderExt{
+            rtp_desc.rtp_header_ext.push_back(
+                jingle::RTPHeaderExt{
                     .id  = session.video_hdrext_transport_cc,
                     .uri = rtp_hdrext_transport_cc_uri,
                 });
         }
         // append ssrc-group
         if(!is_audio) {
-            rtp_desc.ssrc_groups.push_back(jingle::Jingle::Content::RTPDescription::SSRCGroup{
-                .semantics = jingle::Jingle::Content::RTPDescription::SSRCGroup::Semantics::Fid,
-                .ssrcs     = {session.video_ssrc, session.video_rtx_ssrc},
+            rtp_desc.ssrc_group.push_back(jingle::SSRCGroup{
+                .semantics = jingle::SSRCSemantics::Fid,
+                .source    = {{session.video_ssrc}, {session.video_rtx_ssrc}},
             });
         }
         // rtp description done
 
         // build transport
-        auto transport = jingle::Jingle::Content::IceUdpTransport{
+        auto transport = jingle::IceUdpTransport{
             .pwd   = session.local_cred.pwd.get(),
             .ufrag = session.local_cred.ufrag.get(),
         };
@@ -248,7 +249,7 @@ auto JingleHandler::build_accept_jingle() const -> std::optional<jingle::Jingle>
             ensure(!addr.empty());
             const auto  port                = ice::sockaddr_to_port(lc->addr);
             static auto candidate_id_serial = std::atomic_int(0);
-            transport.candidates.push_back(jingle::Jingle::Content::IceUdpTransport::Candidate{
+            transport.candidate.push_back(jingle::Candidate{
                 .component  = uint8_t(lc->component_id),
                 .generation = 0,
                 .port       = port,
@@ -256,30 +257,33 @@ auto JingleHandler::build_accept_jingle() const -> std::optional<jingle::Jingle>
                 .type       = type,
                 .foundation = lc->foundation,
                 .id         = std::format("candidate_{}", candidate_id_serial.fetch_add(1)),
-                .ip_addr    = addr,
+                .ip         = addr,
+                .protocol   = "udp",
             });
         }
         // add fingerprint
-        transport.fingerprints.push_back(jingle::Jingle::Content::IceUdpTransport::FingerPrint{
-            .hash      = session.fingerprint_str,
-            .hash_type = "sha-256",
-            .setup     = "active",
-            .required  = false,
+        transport.fingerprint.push_back(jingle::FingerPrint{
+            .hash     = "sha-256",
+            .setup    = "active",
+            .required = "false",
+            .data     = session.fingerprint_str,
         });
         // transport done
 
-        accept.contents.push_back(
-            jingle::Jingle::Content{
-                .name              = is_audio ? "audio" : "video",
-                .senders           = jingle::Jingle::Content::Senders::Both,
-                .is_from_initiator = false,
-                .descriptions      = {rtp_desc},
-                .transports        = {transport},
+        accept.content.push_back(
+            jingle::Content{
+                .name        = is_audio ? "audio" : "video",
+                .senders     = jingle::Senders::Both,
+                .creator     = "responder",
+                .description = {rtp_desc},
+                .transport   = {transport},
             });
     }
 
-    accept.group.reset(new jingle::Jingle::Group{.semantics = jingle::Jingle::Group::Semantics::Bundle,
-                                                 .contents  = {"audio", "video"}});
+    accept.group.emplace_back(jingle::Group{
+        .semantics = jingle::GroupSemantics::Bundle,
+        .content   = {{"audio"}, {"video"}},
+    });
 
     return accept;
 }
@@ -290,17 +294,17 @@ auto JingleHandler::on_initiate(jingle::Jingle jingle) -> bool {
     auto video_hdrext_transport_cc     = -1;
     auto audio_hdrext_transport_cc     = -1;
     auto audio_hdrext_ssrc_audio_level = -1;
-    auto transport                     = (const jingle::Jingle::Content::IceUdpTransport*)(nullptr);
-    for(const auto& c : jingle.contents) {
-        for(const auto& d : c.descriptions) {
+    auto transport                     = (const jingle::IceUdpTransport*)(nullptr);
+    for(const auto& c : jingle.content) {
+        for(const auto& d : c.description) {
             unwrap(desc, parse_rtp_description(d, ssrc_map));
             codecs.insert(codecs.end(), desc.codecs.begin(), desc.codecs.end());
             replace_default(video_hdrext_transport_cc, desc.video_hdrext_transport_cc);
             replace_default(audio_hdrext_transport_cc, desc.audio_hdrext_transport_cc);
             replace_default(audio_hdrext_ssrc_audio_level, desc.audio_hdrext_ssrc_audio_level);
         }
-        if(!c.transports.empty()) {
-            transport = &c.transports[0];
+        if(!c.transport.empty()) {
+            transport = &c.transport[0];
         }
     }
 
@@ -350,22 +354,26 @@ auto JingleHandler::on_initiate(jingle::Jingle jingle) -> bool {
 }
 
 auto JingleHandler::on_add_source(jingle::Jingle jingle) -> bool {
-    for(const auto& c : jingle.contents) {
-        for(const auto& desc : c.descriptions) {
-            auto type = SourceType();
-            if(desc.media == "audio") {
-                type = SourceType::Audio;
-            } else if(desc.media == "video") {
-                type = SourceType::Video;
-            } else {
-                LOG_WARN(logger, "unknown media {}", desc.media);
+    for(const auto& c : jingle.content) {
+        for(const auto& desc : c.description) {
+            if(!desc.media) {
                 continue;
             }
-            for(const auto& src : desc.sources) {
+            const auto& media = desc.media.value();
+            auto        type  = SourceType();
+            if(media == "audio") {
+                type = SourceType::Audio;
+            } else if(media == "video") {
+                type = SourceType::Video;
+            } else {
+                LOG_WARN(logger, "unknown media {}", media);
+                continue;
+            }
+            for(const auto& src : desc.source) {
                 session.ssrc_map.insert(std::make_pair(src.ssrc, Source{
                                                                      .ssrc           = src.ssrc,
                                                                      .type           = type,
-                                                                     .participant_id = src.owner,
+                                                                     .participant_id = src.ssrc_info[0].owner,
                                                                  }));
             }
         }

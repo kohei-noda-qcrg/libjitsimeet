@@ -1,215 +1,260 @@
 #pragma once
-#include <memory>
-#include <optional>
-#include <string>
 #include <vector>
 
 #include "../xml/xml.hpp"
+#include "serde/serde.hpp"
 
 namespace jingle {
-template <bool optional_value>
-struct Parameter {
-    std::string name;
-    std::string value;
+enum class Action {
+    ContentAccept,    // Accept a content-add action received from another party.
+    ContentAdd,       // Add one or more new content definitions to the session.
+    ContentModify,    // Change the directionality of media sending.
+    ContentReject,    // Reject a content-add action received from another party.
+    ContentRemove,    // Remove one or more content definitions from the session.
+    DescriptionInfo,  // Exchange information about parameters for an application type.
+    SecurityInfo,     // Exchange information about security preconditions.
+    SessionAccept,    // Definitively accept a session negotiation.
+    SessionInfo,      // Send session-level information, such as a ping or a ringing message.
+    SessionInitiate,  // Request negotiation of a new Jingle session.
+    SessionTerminate, // End an existing session.
+    TransportAccept,  // Accept a transport-replace action received from another party.
+    TransportInfo,    // Exchange transport candidates.
+    TransportReject,  // Reject a transport-replace action received from another party.
+    TransportReplace, // Redefine a transport method or replace it with a different method.
+    SourceAdd,        // Non-standard, Add a source to existing content.
+    SourceRemove,     // Non-standard, Remove a source from existing content.
 };
 
-struct Jingle {
-    struct Content;
-    struct Group;
-    enum class Action;
-
-    Action                 action;
-    std::string            sid;
-    std::string            initiator = "";
-    std::string            responder = "";
-    std::unique_ptr<Group> group;
-
-    std::vector<Content> contents;
-};
-
-struct Jingle::Content {
-    struct RTPDescription;
-    struct IceUdpTransport;
-    enum class Senders;
-
-    std::string name;
-    Senders     senders;
-    bool        is_from_initiator = false;
-
-    std::vector<RTPDescription>  descriptions;
-    std::vector<IceUdpTransport> transports;
-};
-
-struct Jingle::Content::RTPDescription {
-    struct PayloadType;
-    struct RTPHeaderExt;
-    struct Source;
-    struct SSRCGroup;
-
-    std::string media       = "";
-    uint32_t    ssrc        = -1;
-    bool        support_mux = false;
-
-    std::vector<PayloadType>  payload_types;
-    std::vector<Source>       sources;
-    std::vector<RTPHeaderExt> rtp_header_exts;
-    std::vector<SSRCGroup>    ssrc_groups;
-};
-
-struct Jingle::Content::RTPDescription::PayloadType {
-    struct RTCPFeedBack;
-    using Parameter = Parameter<false>;
-
-    int         id;
-    int         clockrate = -1;
-    int         channels  = -1;
-    std::string name      = "";
-
-    std::vector<RTCPFeedBack> rtcp_fbs;
-    std::vector<Parameter>    parameters;
-};
-
-struct Jingle::Content::RTPDescription::PayloadType::RTCPFeedBack {
-    std::string type;
-    std::string subtype = "";
-};
-
-struct Jingle::Content::RTPDescription::Source {
-    using Parameter = Parameter<true>;
-
-    uint32_t    ssrc;
-    std::string name       = "";
-    std::string video_type = "";
-    std::string owner      = "";
-
-    std::vector<Parameter> parameters;
-};
-
-struct Jingle::Content::RTPDescription::RTPHeaderExt {
-    int         id;
-    std::string uri;
-};
-
-struct Jingle::Content::RTPDescription::SSRCGroup {
-    enum class Semantics;
-
-    Semantics             semantics;
-    std::vector<uint32_t> ssrcs;
-};
-
-enum class Jingle::Content::RTPDescription::SSRCGroup::Semantics {
-    /// Lip Synchronization, defined in RFC5888.
-    Ls,
-    /// Flow Identification, defined in RFC5888.
-    Fid,
-    /// Single Reservation Flow, defined in RFC3524.
-    Srf,
-    /// Alternative Network Address Types, defined in RFC4091.
-    Anat,
-    /// Forward Error Correction, defined in RFC4756.
-    Fec,
-    /// Decoding Dependency, defined in RFC5583.
-    Ddp,
-};
-
-struct Jingle::Content::IceUdpTransport {
-    struct FingerPrint;
-    struct Candidate;
-
-    std::string pwd;
-    std::string ufrag;
-    std::string websocket;
-    bool        support_mux = false;
-
-    std::vector<FingerPrint> fingerprints;
-    std::vector<Candidate>   candidates;
-};
-
-struct Jingle::Content::IceUdpTransport::FingerPrint {
-    std::string hash;
-    std::string hash_type;
-    std::string setup;
-    bool        required = false;
-};
-
-struct Jingle::Content::IceUdpTransport::Candidate {
-    enum class Type;
-
-    uint8_t     component;
-    uint8_t     generation;
-    uint16_t    port;
-    uint32_t    priority;
-    Type        type;
-    std::string foundation;
-    std::string id;
-    std::string ip_addr;
-};
-
-enum class Jingle::Content::IceUdpTransport::Candidate::Type {
-    Host,
-    Prflx,
-    Relay,
-    Srflx,
-};
-
-enum class Jingle::Content::Senders {
+enum class Senders {
     Both,
     Initiator,
     Responder,
     None,
 };
 
-struct Jingle::Group {
-    enum class Semantics;
-
-    Semantics                semantics;
-    std::vector<std::string> contents;
+enum class SSRCSemantics {
+    Ls,   /// Lip Synchronization, defined in RFC5888.
+    Fid,  /// Flow Identification, defined in RFC5888.
+    Srf,  /// Single Reservation Flow, defined in RFC3524.
+    Anat, /// Alternative Network Address Types, defined in RFC4091.
+    Fec,  /// Forward Error Correction, defined in RFC4756.
+    Ddp,  /// Decoding Dependency, defined in RFC5583.
 };
 
-enum class Jingle::Group::Semantics {
+enum class CandidateType {
+    Host,
+    Prflx,
+    Relay,
+    Srflx,
+};
+
+enum class GroupSemantics {
     LipSync,
     Bundle,
 };
 
-enum class Jingle::Action {
-    /// Accept a content-add action received from another party.
-    ContentAccept,
-    /// Add one or more new content definitions to the session.
-    ContentAdd,
-    /// Change the directionality of media sending.
-    ContentModify,
-    /// Reject a content-add action received from another party.
-    ContentReject,
-    /// Remove one or more content definitions from the session.
-    ContentRemove,
-    /// Exchange information about parameters for an application type.
-    DescriptionInfo,
-    /// Exchange information about security preconditions.
-    SecurityInfo,
-    /// Definitively accept a session negotiation.
-    SessionAccept,
-    /// Send session-level information, such as a ping or a ringing message.
-    SessionInfo,
-    /// Request negotiation of a new Jingle session.
-    SessionInitiate,
-    /// End an existing session.
-    SessionTerminate,
-    /// Accept a transport-replace action received from another party.
-    TransportAccept,
-    /// Exchange transport candidates.
-    TransportInfo,
-    /// Reject a transport-replace action received from another party.
-    TransportReject,
-    /// Redefine a transport method or replace it with a different method.
-    TransportReplace,
+template <class T>
+struct XMLNameSpace {};
 
-    /// --- Non-standard values used by Jitsi Meet: ---
-    /// Add a source to existing content.
-    SourceAdd,
-    /// Remove a source from existing content.
-    SourceRemove,
+struct Parameter {
+    SerdeFieldsBegin;
+    std::string SerdeField(name);
+    std::string SerdeField(value);
+    SerdeFieldsEnd;
+};
+
+struct RTCPFeedBack {
+    constexpr static auto ns = "urn:xmpp:jingle:apps:rtp:rtcp-fb:0";
+
+    SerdeFieldsBegin;
+    [[no_unique_address]]
+    XMLNameSpace<RTCPFeedBack> SerdeField(xmlns);
+    std::string                SerdeField(type);
+    std::optional<std::string> SerdeField(subtype);
+    SerdeFieldsEnd;
+};
+
+struct PayloadType {
+    SerdeFieldsBegin;
+    int                        SerdeField(id);
+    std::optional<int>         SerdeField(clockrate);
+    std::optional<int>         SerdeField(channels);
+    std::optional<std::string> SerdeField(name);
+
+    std::vector<RTCPFeedBack> SerdeNamedField(rtcp_fb, "rtcp-fb");
+    std::vector<Parameter>    SerdeField(parameter);
+    SerdeFieldsEnd;
+};
+
+struct Owner {
+    constexpr static auto ns = "http://jitsi.org/jitmeet";
+
+    SerdeFieldsBegin;
+    [[no_unique_address]]
+    XMLNameSpace<Owner> SerdeField(xmlns);
+    std::string         SerdeField(owner);
+    SerdeFieldsEnd;
+};
+
+struct Source {
+    constexpr static auto ns = "urn:xmpp:jingle:apps:rtp:ssma:0";
+
+    SerdeFieldsBegin;
+    [[no_unique_address]]
+    XMLNameSpace<Source>       SerdeField(xmlns);
+    uint32_t                   SerdeField(ssrc);
+    std::optional<std::string> SerdeField(name);
+    std::optional<std::string> SerdeNamedField(video_type, "videoType");
+
+    std::vector<Parameter> SerdeField(parameter);
+    std::vector<Owner>     SerdeNamedField(ssrc_info, "ssrc-info");
+    SerdeFieldsEnd;
+};
+
+struct RTPHeaderExt {
+    constexpr static auto ns = "urn:xmpp:jingle:apps:rtp:rtp-hdrext:0";
+
+    SerdeFieldsBegin;
+    [[no_unique_address]]
+    XMLNameSpace<RTPHeaderExt> SerdeField(xmlns);
+    int                        SerdeField(id);
+    std::string                SerdeField(uri);
+    SerdeFieldsEnd;
+};
+
+struct SSRC {
+    SerdeFieldsBegin;
+    uint32_t SerdeField(ssrc);
+    SerdeFieldsEnd;
+};
+
+struct SSRCGroup {
+    constexpr static auto ns = "urn:xmpp:jingle:apps:rtp:ssma:0";
+
+    SerdeFieldsBegin;
+    [[no_unique_address]]
+    XMLNameSpace<SSRCGroup> SerdeField(xmlns);
+    SSRCSemantics           SerdeField(semantics);
+
+    std::vector<SSRC> SerdeField(source);
+    SerdeFieldsEnd;
+};
+
+struct RTPDescription {
+    constexpr static auto ns = "urn:xmpp:jingle:apps:rtp:1";
+
+    SerdeFieldsBegin;
+    [[no_unique_address]]
+    XMLNameSpace<RTPDescription> SerdeField(xmlns);
+    std::optional<std::string>   SerdeField(media);
+    std::optional<uint32_t>      SerdeField(ssrc);
+
+    std::vector<PayloadType>  SerdeNamedField(payload_type, "payload-type");
+    std::vector<Source>       SerdeField(source);
+    std::vector<RTPHeaderExt> SerdeNamedField(rtp_header_ext, "rtp-hdrext");
+    std::vector<SSRCGroup>    SerdeNamedField(ssrc_group, "ssrc-group");
+    // TODO: handle "rtcp-mux";
+    SerdeFieldsEnd;
+};
+
+struct ColibriWebSocket {
+    constexpr static auto ns = "http://jitsi.org/protocol/colibri";
+
+    SerdeFieldsBegin;
+    [[no_unique_address]]
+    XMLNameSpace<ColibriWebSocket> SerdeField(xmlns);
+    std::string                    SerdeField(url);
+    SerdeFieldsEnd;
+};
+
+struct FingerPrint {
+    constexpr static auto ns = "urn:xmpp:jingle:apps:dtls:0";
+
+    SerdeFieldsBegin;
+    [[no_unique_address]]
+    XMLNameSpace<FingerPrint>  SerdeField(xmlns);
+    std::string                SerdeField(hash);
+    std::string                SerdeField(setup);
+    std::optional<std::string> SerdeField(required);
+    SerdeFieldsEnd;
+
+    std::string data; // hash body
+};
+
+struct Candidate {
+    SerdeFieldsBegin;
+    uint8_t       SerdeField(component);
+    uint8_t       SerdeField(generation);
+    uint16_t      SerdeField(port);
+    uint32_t      SerdeField(priority);
+    CandidateType SerdeField(type);
+    std::string   SerdeField(foundation);
+    std::string   SerdeField(id);
+    std::string   SerdeField(ip);
+    std::string   SerdeField(protocol);
+    SerdeFieldsEnd;
+};
+
+struct IceUdpTransport {
+    constexpr static auto ns = "urn:xmpp:jingle:transports:ice-udp:1";
+
+    SerdeFieldsBegin;
+    [[no_unique_address]]
+    XMLNameSpace<IceUdpTransport> SerdeField(xmlns);
+    std::string                   SerdeField(pwd);
+    std::string                   SerdeField(ufrag);
+
+    std::vector<ColibriWebSocket> SerdeNamedField(websocket, "web-socket");
+    std::vector<FingerPrint>      SerdeField(fingerprint);
+    std::vector<Candidate>        SerdeField(candidate);
+    // TODO: handle rtcp-mux
+
+    SerdeFieldsEnd;
+};
+
+struct Content {
+    SerdeFieldsBegin;
+    std::string                  SerdeField(name);
+    std::optional<Senders>       SerdeField(senders);
+    std::optional<std::string>   SerdeField(creator);
+    std::vector<RTPDescription>  SerdeField(description);
+    std::vector<IceUdpTransport> SerdeField(transport);
+    SerdeFieldsEnd;
+};
+
+struct GroupContent {
+    SerdeFieldsBegin;
+    std::string SerdeField(name);
+    SerdeFieldsEnd;
+};
+
+struct Group {
+    constexpr static auto ns = "urn:xmpp:jingle:apps:grouping:0";
+
+    SerdeFieldsBegin;
+    [[no_unique_address]]
+    XMLNameSpace<Group> SerdeField(xmlns);
+    GroupSemantics      SerdeField(semantics);
+
+    std::vector<GroupContent> SerdeField(content);
+    SerdeFieldsEnd;
+};
+
+struct Jingle {
+    constexpr static auto ns = "urn:xmpp:jingle:1";
+
+    SerdeFieldsBegin;
+    [[no_unique_address]]
+    XMLNameSpace<Jingle>       SerdeField(xmlns);
+    Action                     SerdeField(action);
+    std::string                SerdeField(sid);
+    std::optional<std::string> SerdeField(initiator);
+    std::optional<std::string> SerdeField(responder);
+    std::vector<Content>       SerdeField(content);
+    std::vector<Group>         SerdeField(group);
+    SerdeFieldsEnd;
 };
 
 auto parse(const xml::Node& node) -> std::optional<Jingle>;
-auto deparse(const Jingle& jingle) -> xml::Node;
+auto deparse(const Jingle& jingle) -> std::optional<xml::Node>;
 } // namespace jingle

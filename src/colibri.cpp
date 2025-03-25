@@ -9,10 +9,10 @@ namespace colibri {
 namespace {
 auto logger = Logger("colibri");
 
-auto find_transport(const jingle::Jingle& jingle) -> const jingle::Jingle::Content::IceUdpTransport* {
-    for(const auto& c : jingle.contents) {
-        if(!c.transports.empty()) {
-            return &c.transports[0];
+auto find_transport(const jingle::Jingle& jingle) -> const jingle::IceUdpTransport* {
+    for(const auto& c : jingle.content) {
+        if(!c.transport.empty()) {
+            return &c.transport[0];
         }
     }
     return nullptr;
@@ -29,8 +29,10 @@ Colibri::~Colibri() {
 
 auto Colibri::connect(const jingle::Jingle& initiate_jingle, const bool secure) -> std::unique_ptr<Colibri> {
     unwrap(transport, find_transport(initiate_jingle));
-    unwrap(ws_uri, URI::parse(transport.websocket));
-    LOG_INFO(logger, "connecting to colibri at {}", transport.websocket);
+    ensure(!transport.websocket.empty());
+    const auto& url = transport.websocket[0].url;
+    unwrap(ws_uri, URI::parse(url));
+    LOG_INFO(logger, "connecting to colibri at {}", url);
 
     const auto uri_domain = std::string(ws_uri.domain);
     const auto uri_path   = std::string(ws_uri.path);

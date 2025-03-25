@@ -34,13 +34,13 @@ struct Agent {
     guint         component_id;
 };
 
-auto setup(std::span<const xmpp::Service> external_services, const jingle::Jingle::Content::IceUdpTransport* transport) -> std::optional<Agent>;
+auto setup(std::span<const xmpp::Service> external_services, const jingle::IceUdpTransport* transport) -> std::optional<Agent>;
 
 auto str_to_sockaddr(const char* addr, uint16_t port) -> NiceAddress;
 auto sockaddr_to_str(const NiceAddress& addr) -> std::string;
 auto sockaddr_to_port(const NiceAddress& addr) -> uint16_t;
-auto candidate_type_to_nice(jingle::Jingle::Content::IceUdpTransport::Candidate::Type type) -> std::optional<NiceCandidateType>;
-auto candidate_type_from_nice(NiceCandidateType type) -> std::optional<jingle::Jingle::Content::IceUdpTransport::Candidate::Type>;
+auto candidate_type_to_nice(jingle::CandidateType type) -> std::optional<NiceCandidateType>;
+auto candidate_type_from_nice(NiceCandidateType type) -> std::optional<jingle::CandidateType>;
 
 struct LocalCredential {
     AutoGChar ufrag;

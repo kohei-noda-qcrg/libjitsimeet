@@ -5,6 +5,7 @@
 #include "jingle/jingle.hpp"
 #include "util/coroutine.hpp"
 #include "util/string-map.hpp"
+#include "xml/xml.hpp"
 #include "xmpp/jid.hpp"
 
 namespace conference {
@@ -31,7 +32,7 @@ struct ConferenceCallbacks {
     virtual auto on_mute_state_changed(const Participant& /*participant*/, bool /*is_audio*/, bool /*new_muted*/) -> void {
     }
 
-    virtual ~ConferenceCallbacks(){};
+    virtual ~ConferenceCallbacks() {};
 };
 
 struct SentIq {
@@ -78,7 +79,7 @@ struct Conference {
 
     static auto create(Config config, ConferenceCallbacks* callbacks) -> std::unique_ptr<Conference>;
 
-    ~Conference(){};
+    ~Conference() {};
 };
 } // namespace conference
 
