@@ -1,5 +1,6 @@
 #pragma once
 #include <functional>
+#include <memory>
 
 #include "codec-type.hpp"
 #include "jingle/jingle.hpp"
