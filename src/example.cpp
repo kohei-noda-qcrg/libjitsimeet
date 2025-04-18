@@ -94,8 +94,9 @@ auto async_main(const int argc, const char* const argv[]) -> coop::Async<int> {
         }
     }
 
-    auto injector   = coop::TaskInjector(*co_await coop::reveal_runner());
-    auto ws_context = ws::client::AsyncContext();
+    auto& runner     = *co_await coop::reveal_runner();
+    auto  injector   = coop::TaskInjector(runner);
+    auto  ws_context = ws::client::AsyncContext();
     co_ensure_v(ws_context.init(
         injector,
         {
@@ -107,7 +108,7 @@ auto async_main(const int argc, const char* const argv[]) -> coop::Async<int> {
         }));
 
     auto ws_task = coop::TaskHandle();
-    co_await coop::run_args(ws_context.process_until_finish()).detach({&ws_task});
+    runner.push_task(ws_context.process_until_finish(), &ws_task);
 
     auto event  = coop::SingleEvent();
     auto jid    = xmpp::Jid();
@@ -186,7 +187,7 @@ auto async_main(const int argc, const char* const argv[]) -> coop::Async<int> {
         }
 
         auto ping_task = coop::TaskHandle();
-        co_await coop::run_args(pinger_main(*conference)).detach({&ping_task});
+        runner.push_task(pinger_main(*conference), &ping_task);
         co_await ws_context.disconnected;
         ping_task.cancel();
     }
